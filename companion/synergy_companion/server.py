@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import hmac
 import json
+import mimetypes
 import subprocess
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 from . import __version__
@@ -26,11 +28,13 @@ class CompanionServer(ThreadingHTTPServer):
         address: tuple[str, int],
         vault: EncryptedVault,
         allowed_origins: set[str],
+        site_root: Path | None = None,
     ) -> None:
         super().__init__(address, CompanionHandler)
         self.vault = vault
         self.allowed_origins = allowed_origins
         self.jobs = AuthJobManager()
+        self.site_root = site_root
 
 
 class CompanionHandler(BaseHTTPRequestHandler):
@@ -46,7 +50,9 @@ class CompanionHandler(BaseHTTPRequestHandler):
 
     def _origin_allowed(self) -> bool:
         origin = self._origin()
-        return bool(origin and origin in self.server.allowed_origins)
+        if origin:
+            return origin in self.server.allowed_origins
+        return self.headers.get("Sec-Fetch-Site") == "same-origin"
 
     def _host_allowed(self) -> bool:
         hostname = urlparse(f"//{self.headers.get('Host', '')}").hostname
@@ -120,8 +126,46 @@ class CompanionHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
+    def _serve_site(self, path: str) -> bool:
+        if path == "/app":
+            self.send_response(HTTPStatus.PERMANENT_REDIRECT)
+            self.send_header("Location", "/app/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return True
+        files = {
+            "/app/": "index.html",
+            "/app/app.js": "app.js",
+            "/app/content.js": "content.js",
+            "/app/styles.css": "styles.css",
+            "/app/favicon.svg": "favicon.svg",
+        }
+        relative = files.get(path)
+        if not relative:
+            return False
+        if not self._host_allowed() or not self.server.site_root:
+            self._error(HTTPStatus.NOT_FOUND, "Local reader is unavailable.")
+            return True
+        source = self.server.site_root / relative
+        try:
+            body = source.read_bytes()
+        except OSError:
+            self._error(HTTPStatus.NOT_FOUND, "Local reader asset is unavailable.")
+            return True
+        media_type = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", f"{media_type}; charset=utf-8" if media_type.startswith("text/") or media_type in {"application/javascript", "image/svg+xml"} else media_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+        return True
+
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if self._serve_site(path):
+            return
         if path == "/v1/health":
             if not self._guard(require_auth=False):
                 return
@@ -242,9 +286,11 @@ class CompanionHandler(BaseHTTPRequestHandler):
         self._error(HTTPStatus.NOT_FOUND, "Route not found.")
 
 
-def serve(vault: EncryptedVault, origins: set[str], port: int) -> None:
-    server = CompanionServer(("127.0.0.1", port), vault, origins)
+def serve(vault: EncryptedVault, origins: set[str], port: int, site_root: Path | None = None) -> None:
+    server = CompanionServer(("127.0.0.1", port), vault, origins, site_root)
     print(f"Synergy Local Companion listening on http://127.0.0.1:{port}")
+    if site_root:
+        print(f"Local reader: http://127.0.0.1:{port}/app/")
     print("Allowed origins:")
     for origin in sorted(origins):
         print(f"  {origin}")

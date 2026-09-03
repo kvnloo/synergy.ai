@@ -13,6 +13,7 @@ from .vault import EncryptedVault, VaultError
 
 DEFAULT_ORIGINS = {
     "https://kvnloo.github.io",
+    "http://127.0.0.1:4388",
     "http://127.0.0.1:4387",
     "http://127.0.0.1:4173",
     "http://localhost:4173",
@@ -38,6 +39,12 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--rotate-pairing", action="store_true")
     result.add_argument("--show-pairing", action="store_true")
+    result.add_argument(
+        "--site-root",
+        type=Path,
+        default=Path(__file__).resolve().parents[2],
+        help="Directory containing index.html and the static Synergy assets.",
+    )
     return result
 
 
@@ -72,7 +79,11 @@ def main() -> None:
         print(vault.pairing_token)
         return
 
-    serve(vault, origins, args.port)
+    site_root = args.site_root.expanduser().resolve()
+    if not (site_root / "index.html").is_file():
+        print("Warning: static site assets were not found; /app/ is unavailable.", file=sys.stderr)
+        site_root = None
+    serve(vault, origins, args.port, site_root)
 
 
 if __name__ == "__main__":

@@ -68,6 +68,8 @@ const aiConnectionLabel = document.querySelector("#ai-connection-label");
 const companionPairingCode = document.querySelector("#companion-pairing-code");
 const pairCompanionButton = document.querySelector("#pair-companion");
 const companionStatus = document.querySelector("#companion-status");
+const companionPairing = document.querySelector(".companion-pairing");
+const openLocalReader = document.querySelector("#open-local-reader");
 const companionControls = document.querySelector("#companion-controls");
 const companionAdapterInput = document.querySelector("#companion-adapter");
 const companionProviderInput = document.querySelector("#companion-provider");
@@ -704,6 +706,15 @@ async function companionRequest(path, options = {}, token = companionToken) {
   return payload;
 }
 
+
+function configureCompanionTransport() {
+  const needsLocalOrigin = window.location.protocol === "https:";
+  companionPairing.hidden = needsLocalOrigin;
+  openLocalReader.hidden = !needsLocalOrigin;
+  if (needsLocalOrigin) {
+    companionStatus.textContent = "Browsers block HTTPS pages from calling an HTTP loopback service. Start the companion, then open its same-origin local reader.";
+  }
+}
 function disconnectCompanion() {
   window.clearTimeout(companionJobTimer);
   companionToken = "";
@@ -1327,6 +1338,7 @@ document.querySelector("#current-date").textContent = new Intl.DateTimeFormat("e
 document.querySelector("#current-year").textContent = today.getFullYear();
 completeOpenRouterConnection();
 
+configureCompanionTransport();
 renderDispatches();
 renderStories();
 applyFilters();

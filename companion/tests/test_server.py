@@ -17,7 +17,12 @@ class CompanionServerTests(unittest.TestCase):
         with patch("synergy_companion.vault._keyring_key", side_effect=VaultError("unavailable")):
             self.vault = EncryptedVault.open(path, passphrase="correct horse battery staple")
         self.origin = "https://kvnloo.github.io"
-        self.server = CompanionServer(("127.0.0.1", 0), self.vault, {self.origin})
+        self.server = CompanionServer(
+            ("127.0.0.1", 0),
+            self.vault,
+            {self.origin},
+            Path(__file__).resolve().parents[2],
+        )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 
@@ -104,6 +109,33 @@ class CompanionServerTests(unittest.TestCase):
         self.assertEqual(captured["timeout"], 90)
         self.assertNotIn("sk-provider-secret", json.dumps(payload))
 
+
+    def test_local_reader_is_served_without_cross_origin_fetch(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request("GET", "/app/")
+        response = connection.getresponse()
+        body = response.read().decode()
+        connection.close()
+
+        self.assertEqual(response.status, 200)
+        self.assertIn("text/html", response.getheader("Content-Type"))
+        self.assertIn("Synergy Local Companion", body)
+        self.assertIn('src="app.js"', body)
+
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request(
+            "GET",
+            "/v1/credentials",
+            headers={
+                "Authorization": f"Bearer {self.vault.pairing_token}",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+        response = connection.getresponse()
+        payload = json.loads(response.read())
+        connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload, [])
 
 if __name__ == "__main__":
     unittest.main()

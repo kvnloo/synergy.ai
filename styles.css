@@ -931,6 +931,19 @@ summary {
   font: 400 10px/1.4 var(--mono);
 }
 .companion-status { min-height: 24px; }
+.local-reader-link {
+  display: block;
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: var(--acid);
+  font: 600 8px/1.3 var(--mono);
+  text-align: center;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.local-reader-link[hidden] { display: none; }
 .companion-job {
   max-height: 150px;
   margin: 10px 0 0;

@@ -43,7 +43,7 @@ python -m venv .venv
 .venv/bin/synergy-companion
 ```
 
-Enter the pairing code printed by the companion in the reader. The code remains only in page memory. The companion binds to `127.0.0.1:4388`, accepts only an exact origin allowlist, requires the pairing code on every privileged request, and does not log request bodies or provider output.
+Because browsers block an HTTPS page from fetching a plain-HTTP loopback service, the published reader does not attempt that request. Start the companion and follow its printed `http://127.0.0.1:4388/app/` URL, or use the published page's **Open the same-origin local reader** link. Enter the printed pairing code there. The code remains only in page memory. The companion binds to `127.0.0.1:4388`, serves the checked-out static site at `/app/`, accepts only an exact origin allowlist, requires the pairing code on every privileged request, and does not log paths, request bodies, or provider output.
 
 The companion's own vault is an authenticated AES-256-GCM envelope. Its random master key is stored in the operating-system keychain when available. If no usable keychain exists, startup requires a passphrase and derives the key with Argon2id; there is no plaintext fallback. Pairing codes and manually saved OpenRouter keys are encrypted at rest. The browser can list credential labels and delete entries, but the listing endpoint never returns secrets.
 
