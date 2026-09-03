@@ -53,6 +53,14 @@ const evidenceCount = document.querySelector("#evidence-count");
 const evidenceDrawer = document.querySelector("#evidence-drawer");
 const previousButton = reader.querySelector(".reader-arrow-prev");
 const nextButton = reader.querySelector(".reader-arrow-next");
+const aiDrawer = document.querySelector("#ai-drawer");
+const aiKeyInput = document.querySelector("#ai-key");
+const aiModelInput = document.querySelector("#ai-model");
+const aiQuestionInput = document.querySelector("#ai-question");
+const askAiButton = document.querySelector("#ask-ai");
+const clearAiKeyButton = document.querySelector("#clear-ai-key");
+const aiStatus = document.querySelector("#ai-status");
+const aiAnswer = document.querySelector("#ai-answer");
 
 let activeTopic = "all";
 let searchTerm = "";
@@ -167,6 +175,10 @@ function openArticle(articleId) {
   if (!article) return;
   currentArticle = article;
   currentSlideIndex = 0;
+  aiDrawer.open = false;
+  aiQuestionInput.value = "";
+  aiStatus.textContent = "";
+  aiAnswer.hidden = true;
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
@@ -188,6 +200,94 @@ function previousSlide() {
 
 function nextSlide() {
   setSlide(currentSlideIndex + 1);
+}
+
+function buildArticleContext(article) {
+  const sourceIndex = new Map();
+  article.slides.forEach((slide) => {
+    slide.sources.forEach((source) => {
+      if (!sourceIndex.has(source.url)) {
+        sourceIndex.set(source.url, {
+          number: sourceIndex.size + 1,
+          ...source
+        });
+      }
+    });
+  });
+
+  const sections = article.slides.map((slide) => {
+    const citations = slide.sources.map((source) => `[${sourceIndex.get(source.url).number}]`).join(" ");
+    return `${slide.kind}: ${slide.title}\n${slide.body}\nCausal chain: ${slide.chain.join(" -> ")}\nEvidence: ${citations}`;
+  }).join("\n\n");
+
+  const sources = [...sourceIndex.values()].map((source) => (
+    `[${source.number}] ${source.title} (${source.relation})\n${source.url}\n${source.note}`
+  )).join("\n\n");
+
+  return `ARTICLE: ${article.title}\n\n${sections}\n\nSOURCE REGISTER:\n${sources}`;
+}
+
+async function askArticleQuestion() {
+  const apiKey = aiKeyInput.value.trim();
+  const question = aiQuestionInput.value.trim();
+  const model = aiModelInput.value.trim() || "openrouter/free";
+
+  if (!apiKey) {
+    aiStatus.textContent = "Enter your OpenRouter key. It is used only for this direct request.";
+    aiKeyInput.focus();
+    return;
+  }
+  if (!question) {
+    aiStatus.textContent = "Ask a question about the open briefing.";
+    aiQuestionInput.focus();
+    return;
+  }
+  if (!currentArticle) return;
+
+  aiStatus.textContent = "Asking the selected model…";
+  aiAnswer.hidden = true;
+  askAiButton.disabled = true;
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "Synergy Evidence Briefs"
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content: "You are the evidence guide for Synergy. Answer only from the supplied article dossier. Explain causal mechanisms, prior interventions, reasons results differed, and constraints on transfer across countries when relevant. Cite the source register with bracketed numbers such as [1]. Separate sourced statements from your interpretation. If the dossier cannot answer part of the question, say what evidence is missing. Do not invent facts, outcomes, laws, or citations."
+          },
+          {
+            role: "user",
+            content: `${buildArticleContext(currentArticle)}\n\nREADER QUESTION:\n${question}`
+          }
+        ]
+      })
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error?.message || `OpenRouter returned ${response.status}.`);
+    }
+    const answer = payload.choices?.[0]?.message?.content;
+    if (!answer) throw new Error("The model returned no answer.");
+
+    aiAnswer.querySelector("div").textContent = answer;
+    aiAnswer.hidden = false;
+    aiStatus.textContent = `Answered with ${model}. Check every citation before relying on it.`;
+  } catch (error) {
+    aiStatus.textContent = `Request failed: ${error.message}`;
+  } finally {
+    askAiButton.disabled = false;
+  }
 }
 
 topicLinks.forEach((link) => {
@@ -232,6 +332,12 @@ readerProgress.addEventListener("click", (event) => {
   const progressButton = event.target.closest("[data-slide]");
   if (progressButton) setSlide(Number(progressButton.dataset.slide));
 });
+askAiButton.addEventListener("click", askArticleQuestion);
+clearAiKeyButton.addEventListener("click", () => {
+  aiKeyInput.value = "";
+  aiStatus.textContent = "Key cleared from this tab.";
+  aiKeyInput.focus();
+});
 
 readerStage.addEventListener("click", (event) => {
   if (event.target.closest("a, button, summary, details")) return;
@@ -259,6 +365,7 @@ reader.addEventListener("close", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.target.matches("input, textarea, select, [contenteditable='true']")) return;
   if (reader.open) {
     if (event.key === "ArrowRight" || event.key === " ") {
       event.preventDefault();

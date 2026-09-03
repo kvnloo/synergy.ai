@@ -225,6 +225,34 @@
             <div id="evidence-list"></div>
             <p class="evidence-note">These are source links and typed relationships, not a universal confidence score. Verify the source before relying on a claim.</p>
           </details>
+          <details class="ai-drawer" id="ai-drawer">
+            <summary><span>Ask AI about this brief</span><span>BYOK</span></summary>
+            <div class="ai-panel">
+              <p class="ai-routing">Uses OpenRouter directly from your browser. Your key stays in this tab and never reaches Synergy. The free model route has rate and availability limits. No hosted model is infinite.</p>
+              <div class="ai-field-row">
+                <label for="ai-key">OpenRouter API key</label>
+                <div class="ai-secret">
+                  <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
+                  <button id="clear-ai-key" type="button">Clear</button>
+                </div>
+                <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">Create a key ↗</a>
+              </div>
+              <div class="ai-field-row">
+                <label for="ai-model">Model route</label>
+                <input id="ai-model" type="text" value="openrouter/free" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="ai-field-row">
+                <label for="ai-question">Question</label>
+                <textarea id="ai-question" rows="3" placeholder="Why did earlier solutions fail, and what would transfer to another country?"></textarea>
+              </div>
+              <button class="ai-submit" id="ask-ai" type="button">Ask with this brief's evidence</button>
+              <p class="ai-status" id="ai-status" aria-live="polite"></p>
+              <article class="ai-answer" id="ai-answer" hidden>
+                <p>Grounded response</p>
+                <div></div>
+              </article>
+            </div>
+          </details>
         </article>
 
         <button class="reader-arrow reader-arrow-prev" type="button" aria-label="Previous snippet">←</button>

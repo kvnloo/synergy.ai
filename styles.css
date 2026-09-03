@@ -557,3 +557,85 @@ img, svg { display: block; }
     font-size: 7px;
   }
 }
+
+.ai-drawer { margin-top: 10px; }
+.ai-drawer > summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font: 500 9px/1 var(--mono);
+  text-transform: uppercase;
+  list-style: none;
+}
+.ai-drawer > summary::-webkit-details-marker { display: none; }
+.ai-drawer > summary span:last-child {
+  padding: 3px 5px;
+  color: var(--ink);
+  background: var(--acid);
+  font-size: 7px;
+}
+.ai-panel { padding: 16px 0 4px; }
+.ai-routing {
+  margin: 0 0 17px;
+  padding: 11px;
+  color: var(--ink);
+  background: rgba(216, 255, 101, .42);
+  font: 400 8px/1.5 var(--mono);
+}
+.ai-field-row { margin-top: 13px; }
+.ai-field-row > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-soft);
+  font: 500 8px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.ai-field-row input, .ai-field-row textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  font: 400 11px/1.45 var(--sans);
+}
+.ai-field-row input:focus, .ai-field-row textarea:focus { border-color: var(--orange); }
+.ai-field-row textarea { resize: vertical; min-height: 75px; }
+.ai-field-row > a {
+  display: inline-block;
+  margin-top: 6px;
+  font: 500 8px/1 var(--mono);
+  text-underline-offset: 3px;
+}
+.ai-secret { display: grid; grid-template-columns: 1fr auto; }
+.ai-secret input { min-width: 0; }
+.ai-secret button {
+  padding: 0 10px;
+  border: 1px solid var(--ink);
+  color: #fff;
+  background: var(--ink);
+  cursor: pointer;
+  font: 500 8px/1 var(--mono);
+  text-transform: uppercase;
+}
+.ai-submit {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  border: 0;
+  color: #fff;
+  background: var(--orange-dark);
+  cursor: pointer;
+  font: 500 9px/1 var(--mono);
+  text-transform: uppercase;
+}
+.ai-submit:disabled { opacity: .55; cursor: wait; }
+.ai-status { min-height: 24px; margin: 9px 0 0; color: var(--ink-soft); font: 400 8px/1.4 var(--mono); }
+.ai-answer { margin-top: 6px; padding: 13px; color: #fff; background: var(--ink); }
+.ai-answer > p { margin: 0 0 9px; color: var(--acid); font: 500 7px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+.ai-answer > div { white-space: pre-wrap; font-size: 11px; line-height: 1.55; }
