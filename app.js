@@ -1,3 +1,5 @@
+import { articles } from "./content.js";
+
 const dispatches = [
   {
     label: "Reading list",
@@ -25,64 +27,7 @@ const dispatches = [
   }
 ];
 
-const stories = [
-  {
-    topic: "climate",
-    label: "Climate",
-    readTime: "6 min",
-    title: "Heat is a public-health emergency before it becomes a headline.",
-    summary: "Start with exposure, housing, power, and access to care. The temperature alone does not describe who is at risk.",
-    source: "WHO climate and health",
-    url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health",
-    visual: "climate",
-    visualWord: "HEAT / CARE"
-  },
-  {
-    topic: "technology",
-    label: "Public-interest tech",
-    readTime: "8 min",
-    title: "AI can shorten the research loop. It cannot own the judgment.",
-    summary: "A working rule for crisis research: automate retrieval and comparison, then keep a person responsible for every published claim.",
-    source: "ICRC data protection handbook",
-    url: "https://www.icrc.org/en/publication/4305-handbook-data-protection-humanitarian-action-third-edition",
-    visual: "technology",
-    visualWord: "HUMAN / REVIEW"
-  },
-  {
-    topic: "conflict displacement",
-    label: "Displacement",
-    readTime: "5 min",
-    title: "Displacement totals are the beginning of the question.",
-    summary: "Definitions, reporting windows, and missing registrations matter. Read the number with the method that produced it.",
-    source: "UNHCR Refugee Data Finder",
-    url: "https://www.unhcr.org/refugee-statistics/",
-    visual: "displacement",
-    visualWord: "COUNT / PEOPLE"
-  },
-  {
-    topic: "health conflict",
-    label: "Health",
-    readTime: "7 min",
-    title: "A hospital is a network, not a building.",
-    summary: "Staff, fuel, clean water, medicine, referrals, and safe access determine whether care continues during conflict.",
-    source: "WHO emergencies",
-    url: "https://www.who.int/emergencies/situations/conflict-in-Israel-and-oPt",
-    visual: "health",
-    visualWord: "SYSTEM / DOWN"
-  },
-  {
-    topic: "conflict",
-    label: "Humanitarian law",
-    readTime: "4 min",
-    title: "The rules of war are practical constraints, not background theory.",
-    summary: "Distinction, proportionality, and precautions shape what parties may do and what monitors document.",
-    source: "ICRC law and policy",
-    url: "https://www.icrc.org/en/law-and-policy",
-    visual: "conflict",
-    visualWord: "RULES / APPLY"
-  }
-];
-
+const storyArticles = articles.filter((article) => article.id !== "sudan-access");
 const dispatchList = document.querySelector("#dispatch-list");
 const storyGrid = document.querySelector("#story-grid");
 const topicLinks = [...document.querySelectorAll("[data-topic]")];
@@ -94,9 +39,26 @@ const filterStatus = document.querySelector("#filter-status");
 const emptyState = document.querySelector("#empty-state");
 const menuButton = document.querySelector(".menu-button");
 const siteNav = document.querySelector("#site-nav");
+const reader = document.querySelector("#story-reader");
+const readerStage = reader.querySelector(".reader-stage");
+const readerCard = reader.querySelector(".reader-card");
+const readerProgress = document.querySelector("#reader-progress");
+const readerKicker = document.querySelector("#reader-kicker");
+const readerCount = document.querySelector("#reader-count");
+const readerTitle = document.querySelector("#reader-title");
+const readerBody = document.querySelector("#reader-body");
+const causalChain = document.querySelector("#causal-chain");
+const evidenceList = document.querySelector("#evidence-list");
+const evidenceCount = document.querySelector("#evidence-count");
+const evidenceDrawer = document.querySelector("#evidence-drawer");
+const previousButton = reader.querySelector(".reader-arrow-prev");
+const nextButton = reader.querySelector(".reader-arrow-next");
 
 let activeTopic = "all";
 let searchTerm = "";
+let currentArticle = null;
+let currentSlideIndex = 0;
+let touchStartX = null;
 
 function externalAttributes(url) {
   return url.startsWith("http") ? 'target="_blank" rel="noreferrer"' : "";
@@ -113,16 +75,16 @@ function renderDispatches() {
 }
 
 function renderStories() {
-  storyGrid.innerHTML = stories.map((story) => `
-    <article class="story-card searchable" data-topic="${story.topic}" data-search="${story.label} ${story.title} ${story.summary} ${story.source}">
-      <a class="story-card-visual visual-${story.visual}" href="${story.url}" target="_blank" rel="noreferrer" aria-label="Read source for ${story.title}">
-        <span class="visual-label">Source note / ${story.label}</span>
-        <span class="visual-word">${story.visualWord}</span>
+  storyGrid.innerHTML = storyArticles.map((article) => `
+    <article class="story-card searchable" data-topic="${article.topic}" data-search="${article.label} ${article.title} ${article.summary}">
+      <a class="story-card-visual visual-${article.visual} article-link" href="#story-reader" data-article="${article.id}" aria-label="Open evidence briefing for ${article.title}">
+        <span class="visual-label">Evidence brief / ${article.label}</span>
+        <span class="visual-word">${article.visualWord}</span>
       </a>
-      <div class="story-meta"><span>${story.label}</span><span>${story.readTime}</span></div>
-      <h3><a href="${story.url}" target="_blank" rel="noreferrer">${story.title}</a></h3>
-      <p>${story.summary}</p>
-      <a class="story-source" href="${story.url}" target="_blank" rel="noreferrer">Open source: ${story.source} ↗</a>
+      <div class="story-meta"><span>${article.label}</span><span>${article.readTime}</span></div>
+      <h3><a class="article-link" href="#story-reader" data-article="${article.id}">${article.title}</a></h3>
+      <p>${article.summary}</p>
+      <a class="story-source article-link" href="#story-reader" data-article="${article.id}">Open five-part briefing →</a>
     </article>
   `).join("");
 }
@@ -163,6 +125,71 @@ function setTopic(topic, selectedLink) {
   applyFilters();
 }
 
+function evidenceMarkup(source) {
+  return `
+    <article class="evidence-item">
+      <div class="evidence-relation">${source.relation}</div>
+      <div>
+        <a href="${source.url}" target="_blank" rel="noreferrer">${source.title} ↗</a>
+        <p>${source.note}</p>
+      </div>
+    </article>
+  `;
+}
+
+function renderReaderSlide() {
+  const slide = currentArticle.slides[currentSlideIndex];
+  const slideNumber = currentSlideIndex + 1;
+  readerStage.dataset.theme = currentArticle.visual;
+  readerKicker.textContent = `${currentArticle.label} / ${slide.kind}`;
+  readerCount.textContent = `${String(slideNumber).padStart(2, "0")} / ${String(currentArticle.slides.length).padStart(2, "0")}`;
+  readerTitle.textContent = slide.title;
+  readerBody.textContent = slide.body;
+  causalChain.innerHTML = slide.chain.map((step, index) => `
+    <li><span>${String(index + 1).padStart(2, "0")}</span><p>${step}</p></li>
+  `).join("");
+  evidenceList.innerHTML = slide.sources.map(evidenceMarkup).join("");
+  evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"}`;
+  evidenceDrawer.open = false;
+  readerProgress.innerHTML = currentArticle.slides.map((item, index) => `
+    <button type="button" class="${index === currentSlideIndex ? "is-active" : ""}" data-slide="${index}" aria-label="Open snippet ${index + 1}: ${item.kind}"><span></span></button>
+  `).join("");
+  previousButton.disabled = currentSlideIndex === 0;
+  nextButton.disabled = currentSlideIndex === currentArticle.slides.length - 1;
+  readerCard.animate(
+    [{ opacity: 0.35, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }],
+    { duration: 220, easing: "ease-out" }
+  );
+}
+
+function openArticle(articleId) {
+  const article = articles.find((candidate) => candidate.id === articleId);
+  if (!article) return;
+  currentArticle = article;
+  currentSlideIndex = 0;
+  renderReaderSlide();
+  reader.showModal();
+  document.documentElement.classList.add("reader-open");
+}
+
+function closeReader() {
+  if (reader.open) reader.close();
+}
+
+function setSlide(index) {
+  if (!currentArticle || index < 0 || index >= currentArticle.slides.length || index === currentSlideIndex) return;
+  currentSlideIndex = index;
+  renderReaderSlide();
+}
+
+function previousSlide() {
+  setSlide(currentSlideIndex - 1);
+}
+
+function nextSlide() {
+  setSlide(currentSlideIndex + 1);
+}
+
 topicLinks.forEach((link) => {
   link.addEventListener("click", () => {
     setTopic(link.dataset.topic, link);
@@ -191,7 +218,58 @@ menuButton.addEventListener("click", () => {
   menuButton.setAttribute("aria-expanded", String(willOpen));
 });
 
+document.addEventListener("click", (event) => {
+  const articleLink = event.target.closest(".article-link");
+  if (!articleLink) return;
+  event.preventDefault();
+  openArticle(articleLink.dataset.article);
+});
+
+reader.querySelector(".reader-close").addEventListener("click", closeReader);
+previousButton.addEventListener("click", previousSlide);
+nextButton.addEventListener("click", nextSlide);
+readerProgress.addEventListener("click", (event) => {
+  const progressButton = event.target.closest("[data-slide]");
+  if (progressButton) setSlide(Number(progressButton.dataset.slide));
+});
+
+readerStage.addEventListener("click", (event) => {
+  if (event.target.closest("a, button, summary, details")) return;
+  if (event.clientX >= window.innerWidth / 2) nextSlide();
+  else previousSlide();
+});
+
+readerStage.addEventListener("touchstart", (event) => {
+  touchStartX = event.changedTouches[0].clientX;
+}, { passive: true });
+
+readerStage.addEventListener("touchend", (event) => {
+  if (touchStartX === null) return;
+  const distance = event.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(distance) > 55) {
+    if (distance < 0) nextSlide();
+    else previousSlide();
+  }
+  touchStartX = null;
+}, { passive: true });
+
+reader.addEventListener("close", () => {
+  document.documentElement.classList.remove("reader-open");
+  currentArticle = null;
+});
+
 document.addEventListener("keydown", (event) => {
+  if (reader.open) {
+    if (event.key === "ArrowRight" || event.key === " ") {
+      event.preventDefault();
+      nextSlide();
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      previousSlide();
+    }
+    return;
+  }
   if (event.key === "Escape" && !searchPanel.hidden) {
     searchPanel.hidden = true;
     searchButton.setAttribute("aria-expanded", "false");
@@ -201,8 +279,7 @@ document.addEventListener("keydown", (event) => {
 
 document.querySelector("#newsletter-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  const message = document.querySelector("#form-message");
-  message.textContent = "Preview confirmed. Connect an email provider before launch.";
+  document.querySelector("#form-message").textContent = "Preview confirmed. Connect an email provider before launch.";
 });
 
 const today = new Date();
