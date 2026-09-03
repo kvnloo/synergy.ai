@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Synergy connects humanitarian reporting, primary sources, and practical projects for people who want to help.">
+    <meta name="theme-color" content="#f3efe4">
+    <title>Synergy | Intelligence for people who act</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to the stories</a>
+
+    <div class="signal-bar" role="note">
+      <span class="signal-dot" aria-hidden="true"></span>
+      <p>Independent notes on crises, public-interest technology, and work worth joining.</p>
+      <a href="#principles">How we work</a>
+    </div>
+
+    <header class="site-header">
+      <div class="header-main shell">
+        <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">
+          <span class="sr-only">Open menu</span>
+          <span></span><span></span>
+        </button>
+        <a class="wordmark" href="#top" aria-label="Synergy home">
+          <span>SYNERGY</span>
+          <small>Briefs / tools / action</small>
+        </a>
+        <p class="header-date" id="current-date"></p>
+        <button class="search-button" type="button" aria-expanded="false" aria-controls="search-panel">
+          <span>Search</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+        </button>
+      </div>
+
+      <nav class="topic-nav shell" id="site-nav" aria-label="Topics">
+        <a href="#latest" data-topic="all" class="is-active">Latest</a>
+        <a href="#latest" data-topic="conflict">Conflict</a>
+        <a href="#latest" data-topic="climate">Climate</a>
+        <a href="#latest" data-topic="health">Health</a>
+        <a href="#latest" data-topic="technology">Public-interest tech</a>
+        <a href="#projects" data-topic="projects">Projects</a>
+      </nav>
+
+      <div class="search-panel" id="search-panel" hidden>
+        <div class="shell search-inner">
+          <label for="site-search">Search briefs and projects</label>
+          <input id="site-search" type="search" autocomplete="off" placeholder="Try “displacement” or “open source”">
+          <p id="search-count" aria-live="polite"></p>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" id="top" aria-labelledby="lead-title">
+        <aside class="most-read section-rule" aria-labelledby="most-read-title">
+          <div class="section-heading">
+            <p class="eyebrow">Signal</p>
+            <h2 id="most-read-title">Start here</h2>
+          </div>
+          <ol>
+            <li>
+              <span>01</span>
+              <a href="https://www.unocha.org/sudan" target="_blank" rel="noreferrer">Sudan: the aid access problem, in primary sources</a>
+            </li>
+            <li>
+              <span>02</span>
+              <a href="https://www.who.int/emergencies/situations/conflict-in-Israel-and-oPt" target="_blank" rel="noreferrer">How health systems fail under sustained conflict</a>
+            </li>
+            <li>
+              <span>03</span>
+              <a href="#projects">Where open-source builders can be useful now</a>
+            </li>
+            <li>
+              <span>04</span>
+              <a href="https://www.icrc.org/en/what-we-do/restoring-family-links" target="_blank" rel="noreferrer">Why reconnecting families is core aid infrastructure</a>
+            </li>
+          </ol>
+        </aside>
+
+        <article class="lead-story searchable" data-topic="conflict" data-search="sudan aid access displacement humanitarian response primary sources">
+          <a class="lead-art" href="https://www.unocha.org/sudan" target="_blank" rel="noreferrer" aria-label="Read the UN OCHA Sudan overview">
+            <div class="map-grid" aria-hidden="true">
+              <span class="map-ring ring-one"></span>
+              <span class="map-ring ring-two"></span>
+              <span class="map-marker marker-one"></span>
+              <span class="map-marker marker-two"></span>
+              <span class="map-marker marker-three"></span>
+              <p>ACCESS<br>IS THE<br>STORY</p>
+            </div>
+            <span class="art-credit">A field-note view, not a live map</span>
+          </a>
+          <div class="story-meta"><span>Conflict</span><span>7 min briefing</span></div>
+          <h1 id="lead-title"><a href="https://www.unocha.org/sudan" target="_blank" rel="noreferrer">A crisis is also a logistics system. Sudan shows where it breaks.</a></h1>
+          <p class="dek">News tells us that aid is blocked. The harder question is how: which roads close, who controls access, and what local responders need to keep moving.</p>
+          <div class="byline"><span>SYNERGY DESK</span><span>Source: UN OCHA</span></div>
+        </article>
+
+        <aside class="latest-rail section-rule" aria-labelledby="latest-rail-title">
+          <div class="section-heading inline-heading">
+            <div><p class="eyebrow">Dispatches</p><h2 id="latest-rail-title">Latest notes</h2></div>
+            <a href="#latest">View all</a>
+          </div>
+          <div id="dispatch-list"></div>
+        </aside>
+      </section>
+
+      <section class="briefing-band" aria-label="Editorial note">
+        <div class="shell briefing-inner">
+          <p class="eyebrow">Why this exists</p>
+          <p>Attention is abundant. Useful context is not. We read the primary material, show our sources, and point toward work that a small team can actually do.</p>
+          <a href="#principles">Read our principles <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section class="stories shell" id="latest" aria-labelledby="stories-title">
+        <div class="section-heading stories-heading">
+          <div><p class="eyebrow">Field notes</p><h2 id="stories-title">What deserves attention</h2></div>
+          <div class="filter-status" id="filter-status" aria-live="polite">Showing all topics</div>
+        </div>
+        <div class="story-grid" id="story-grid"></div>
+        <p class="empty-state" id="empty-state" hidden>No notes match that search yet.</p>
+      </section>
+
+      <section class="projects" id="projects" aria-labelledby="projects-title">
+        <div class="shell">
+          <div class="projects-intro">
+            <div>
+              <p class="eyebrow light">Open work</p>
+              <h2 id="projects-title">Reporting should end in a next step.</h2>
+            </div>
+            <p>Small, inspectable projects. No grand platform claims. Each starts with a user, a constraint, and a way to tell whether it helped.</p>
+          </div>
+          <div class="project-grid">
+            <article class="project-card searchable" data-topic="projects technology" data-search="source kit primary sources research verification evidence">
+              <div class="project-number">01</div>
+              <div>
+                <p class="project-state"><span></span>Building</p>
+                <h3>Source Kit</h3>
+                <p>A lightweight workflow for turning scattered humanitarian updates into short, cited research packets.</p>
+                <ul><li>Primary-source first</li><li>Exportable citations</li><li>Human review required</li></ul>
+              </div>
+              <a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">Follow the work <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="project-card searchable" data-topic="projects technology" data-search="needs map local responders public data open source mapping">
+              <div class="project-number">02</div>
+              <div>
+                <p class="project-state queued"><span></span>Research queue</p>
+                <h3>Needs Map</h3>
+                <p>Test whether public data can help small donors find specific, locally led response work without flattening local context.</p>
+                <ul><li>Responder interviews first</li><li>No beneficiary tracking</li><li>Public methods</li></ul>
+              </div>
+              <a href="mailto:hello@synergy.ai?subject=Needs%20Map">Share relevant work <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="project-card searchable" data-topic="projects technology" data-search="translation language access emergency information prototype">
+              <div class="project-number">03</div>
+              <div>
+                <p class="project-state queued"><span></span>Question stage</p>
+                <h3>Language Relay</h3>
+                <p>Explore where machine translation can speed emergency information work, and where it is too risky to use.</p>
+                <ul><li>Named failure modes</li><li>Native-speaker review</li><li>Offline-friendly output</li></ul>
+              </div>
+              <a href="mailto:hello@synergy.ai?subject=Language%20Relay">Contribute context <span aria-hidden="true">↗</span></a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="principles shell" id="principles" aria-labelledby="principles-title">
+        <div class="principles-title">
+          <p class="eyebrow">Editorial code</p>
+          <h2 id="principles-title">Earn the reader's trust.</h2>
+        </div>
+        <div class="principle-list">
+          <article><span>01</span><h3>Use the closest source.</h3><p>We link to agencies, local organizations, datasets, and original documents. Commentary comes second.</p></article>
+          <article><span>02</span><h3>Label what we know.</h3><p>Reported fact, interpretation, and project hypothesis are different things. The page should make that obvious.</p></article>
+          <article><span>03</span><h3>Measure the work.</h3><p>A useful tool has a named user and an observable result. Code shipped is not the same as a problem solved.</p></article>
+          <article><span>04</span><h3>Protect people before data.</h3><p>We do not collect sensitive information because it might be useful later. Human safety sets the limit.</p></article>
+        </div>
+      </section>
+
+      <section class="newsletter" aria-labelledby="newsletter-title">
+        <div class="shell newsletter-inner">
+          <div>
+            <p class="eyebrow">Low-volume dispatch</p>
+            <h2 id="newsletter-title">One useful briefing. No outrage cycle.</h2>
+          </div>
+          <form id="newsletter-form">
+            <label class="sr-only" for="email">Email address</label>
+            <input id="email" type="email" required placeholder="you@example.com">
+            <button type="submit">Join the list</button>
+            <p id="form-message" aria-live="polite">A preview only. No address leaves your browser.</p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-grid">
+        <div class="footer-brand"><a href="#top">SYNERGY</a><p>Intelligence for people who act.</p></div>
+        <div><h2>Read</h2><a href="#latest">Latest notes</a><a href="#projects">Open work</a><a href="#principles">Principles</a></div>
+        <div><h2>Elsewhere</h2><a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://boplog.com" target="_blank" rel="noreferrer">Boplog ↗</a></div>
+        <div class="footer-note"><p>Built in public. Sources stay attached. Claims stay small enough to test.</p><span>© <span id="current-year"></span> Synergy</span></div>
+      </div>
+    </footer>
+  </body>
+</html>
