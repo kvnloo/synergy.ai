@@ -298,5 +298,73 @@ export const articles = [
         sources: [{ relation: "principle", title: "ICRC: Command responsibility and IHL", url: "https://www.icrc.org/en/document/ihl-rules-of-war-faq-geneva-conventions", note: "Overview of duties and accountability under the law of armed conflict." }]
       }
     ]
+  },
+  {
+    id: "glp1-willpower",
+    topic: "health technology",
+    label: "Health",
+    readTime: "8 min briefing",
+    title: "Willpower is becoming a public system problem, not a private virtue.",
+    summary: "GLP-1 and multi-agonist drugs quiet appetite and improve metabolic markers. The harder societal question is how conscious control, attention, and access get designed when food, feeds, and algorithms all compete for the same scarce self.",
+    visual: "health",
+    visualWord: "CONTROL / CRAVING",
+    slides: [
+      {
+        kind: "The brief",
+        title: "Multi-pathway agonists change the set-point. They do not invent free will.",
+        body: "Semaglutide is a GLP-1 receptor agonist. Tirzepatide is a dual GIP and GLP-1 agonist. Investigational retatrutide adds glucagon. In large trials these medicines produce large, sustained weight loss and improve cardiometabolic markers, including glycemic control. People also report quieter food drive. That is pharmacology acting on gut-brain circuits, not proof that character improved. The public story often mislabels the ladder: Ozempic is not a dual agonist, and Mounjaro is not a triple.",
+        chain: ["Gut-brain signal", "Appetite and intake fall", "Weight and glucose move", "Craving load drops", "Attention budget can be reallocated"],
+        sources: [
+          { relation: "supports", title: "STEP 1: once-weekly semaglutide in overweight or obesity", url: "https://pubmed.ncbi.nlm.nih.gov/33567185/", note: "NEJM trial: mean weight change -14.9% with 2.4 mg semaglutide vs -2.4% placebo at 68 weeks." },
+          { relation: "supports", title: "SURMOUNT-1: tirzepatide once weekly for obesity", url: "https://pubmed.ncbi.nlm.nih.gov/35658024/", note: "NEJM phase 3: dual GIP/GLP-1 agonist; mean weight change to -20.9% at 15 mg vs -3.1% placebo at 72 weeks." },
+          { relation: "supports", title: "Retatrutide phase 2 obesity trial", url: "https://pubmed.ncbi.nlm.nih.gov/37366315/", note: "NEJM phase 2: triple GIP/GLP-1/glucagon agonist; up to -24.2% mean weight change at 48 weeks at 12 mg." },
+          { relation: "supports", title: "FDA: Zepbound (tirzepatide) approval", url: "https://www.fda.gov/news-events/press-announcements/fda-approves-new-medication-chronic-weight-management", note: "Confirms dual GLP-1 and GIP receptor activation, chronic weight-management indication, and side-effect warnings." }
+        ]
+      },
+      {
+        kind: "Why it exists",
+        title: "Obesogenic environments made appetite a population-scale failure mode.",
+        body: "WHO treats obesity as a chronic, relapsing disease shaped by genetics, neurobiology, markets, and environments, not as a simple calories-in moral story. More than a billion people live with obesity; adult obesity more than doubled since 1990. Ultra-processed food, sedentary design, and attention markets raise the cost of restraint every hour. When self-control is the only tool, the system wins. Drugs that lower the craving load arrived into that mismatch. Separately, AI and ranking systems make attention scarcer, so the remaining conscious control becomes more valuable for work, health, and civic life.",
+        chain: ["Environment raises craving load", "Individual willpower saturates", "Metabolic disease compounds", "Drug classes target gut-brain pathways", "Attention scarcity raises the stakes of control"],
+        sources: [
+          { relation: "supports", title: "WHO: Obesity and overweight", url: "https://www.who.int/news-room/fact-sheets/detail/obesity-and-overweight", note: "Defines obesity as chronic disease; 2022 prevalence and environmental drivers." },
+          { relation: "context", title: "WHO: GLP-1 therapies Q&A", url: "https://www.who.int/news-room/questions-and-answers/item/obesity-glp-1-therapies", note: "Explains appetite, fullness, glucose effects, and that medicines are not a standalone solution." },
+          { relation: "context", title: "Bryan Johnson / Blueprint protocol", url: "https://bryanjohnson.com/", note: "Public longevity protocol framed as an algorithm that reduces reliance on moment-to-moment willpower." }
+        ]
+      },
+      {
+        kind: "What has been tried",
+        title: "Lifestyle, older drugs, surgery, then single, dual, and triple agonists.",
+        body: "Diet and activity remain foundational and still fail many people when the environment is hostile. Older pharmacotherapy offered modest average effects. Bariatric surgery works for selected patients but does not scale like a weekly injection. GLP-1 monotherapy, then dual agonism, then investigational triple agonism escalated average weight loss. WHO now pairs conditional long-term GLP-1 use for adults with obesity with intensive behavioral support. Blueprint-style protocols attack the same problem from the opposite direction: precommitment, meal defaults, sleep rules, and measurement so fewer decisions need raw restraint. Neither path replaces the other.",
+        chain: ["Lifestyle defaults", "Older pharmacotherapy", "Metabolic surgery", "Single then multi-agonists", "Behavioral and protocol scaffolds"],
+        sources: [
+          { relation: "supports", title: "WHO guideline on GLP-1 therapies for adult obesity", url: "https://www.who.int/news/item/01-12-2025-who-issues-global-guideline-on-the-use-of-glp-1-medicines-in-treating-obesity", note: "Conditional recommendations for long-term GLP-1 use plus intensive behavioral interventions; medicines alone will not reverse obesity." },
+          { relation: "method", title: "WHO Acceleration plan to stop obesity", url: "https://www.who.int/publications/i/item/9789240075634", note: "Population, prevention, and care pillars beyond any single drug class." },
+          { relation: "qualifies", title: "Blueprint protocol information", url: "https://blueprint.bryanjohnson.com/pages/blueprint-protocol", note: "Systems approach to daily health behaviors; useful as a willpower-design reference, not as clinical guidance for incretin drugs." }
+        ]
+      },
+      {
+        kind: "Across borders",
+        title: "The molecule transfers. Coverage, trust, and counterfeits do not.",
+        body: "A dual agonist approved in one market may be unaffordable, unregistered, or diverted in another. WHO warns that demand has fueled falsified and substandard products. Even with manufacturing expansion, GLP-1 therapies may reach fewer than 10% of people who could benefit by 2030 without deliberate access policy. Health systems differ on who can prescribe, who pays, how shortages are rationed, and whether behavioral care exists at all. A performance protocol that assumes private compounding, concierge labs, or unlimited personal coaching will not transfer to a public clinic. Start from the function: lower harmful craving load, protect metabolic health, preserve agency — then rebuild delivery under local law and capacity.",
+        chain: ["Name the clinical function", "Map registration and payment", "Secure quality supply", "Attach behavioral care", "Measure equity of reach"],
+        sources: [
+          { relation: "supports", title: "WHO GLP-1 guideline announcement", url: "https://www.who.int/news/item/01-12-2025-who-issues-global-guideline-on-the-use-of-glp-1-medicines-in-treating-obesity", note: "Access, affordability, system readiness, and <10% reach projection by 2030 without policy action." },
+          { relation: "risk", title: "WHO warning on falsified diabetes and weight-loss medicines", url: "https://www.who.int/news/item/20-06-2024-who-issues-warning-on-falsified-medicines-used-for-diabetes-treatment-and-weight-loss", note: "Counterfeit risk under high demand." },
+          { relation: "context", title: "WHO Essential Medicines update including GLP-1 for high-risk diabetes", url: "https://www.who.int/news/item/05-09-2025-who-updates-list-of-essential-medicines-to-include-key-cancer--diabetes-treatments", note: "Signals prioritization pressure inside essential-medicine frameworks." }
+        ]
+      },
+      {
+        kind: "Better incentives",
+        title: "Pay for durable control and fair access, not injection theater.",
+        body: "Markets currently reward scarcity hype, aesthetic weight loss, and continuous consumption. Better public measures track durable metabolic health, reduced disability, return of agency, and equitable access — not vials sold. Pair pharmacology with food-environment rules, attention-hygiene defaults, and personal protocols that make good action automatic. As AI raises the return on focused work, conscious control becomes infrastructure. The win condition is people who can direct their attention and appetite without burning the day on resistance. Fail conditions: black-market product harm, care only for the wealthy, and the false claim that a shot replaces sleep, food quality, movement, or judgment.",
+        chain: ["Define human outcomes", "Price quality access", "Redesign craving environments", "Support protocol scaffolds", "Keep a human accountable for care"],
+        sources: [
+          { relation: "principle", title: "WHO: medicines alone will not solve obesity", url: "https://www.who.int/news/item/01-12-2025-who-issues-global-guideline-on-the-use-of-glp-1-medicines-in-treating-obesity", note: "Three-pillar strategy: healthier environments, prevention for high risk, lifelong person-centred care." },
+          { relation: "principle", title: "WHO obesity fact sheet on multisector action", url: "https://www.who.int/news-room/fact-sheets/detail/obesity-and-overweight", note: "Structural food, marketing, and health-system responses beyond individual willpower." },
+          { relation: "context", title: "Blueprint: algorithm over moment-to-moment willpower", url: "https://bryanjohnson.com/", note: "Performance-protocol framing that treats self-control as a designed system." }
+        ]
+      }
+    ]
   }
 ];

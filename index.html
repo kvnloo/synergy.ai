@@ -16,7 +16,7 @@
     <script type="module" src="app.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to the stories</a>
+    <a class="skip-link" href="#main">Skip to content</a>
 
     <div class="signal-bar" role="note">
       <span class="signal-dot" aria-hidden="true"></span>
@@ -26,8 +26,8 @@
 
     <header class="site-header">
       <div class="header-main shell">
-        <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">
-          <span class="sr-only">Open menu</span>
+        <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <span class="sr-only" id="menu-button-label">Open menu</span>
           <span></span><span></span>
         </button>
         <a class="wordmark" href="#top" aria-label="Synergy home">
@@ -36,8 +36,8 @@
         </a>
         <p class="header-date" id="current-date"></p>
         <div class="header-tools">
-          <button class="voice-toggle" type="button" aria-pressed="false"><span aria-hidden="true">●</span><span>Voice</span></button>
-          <button class="search-button" type="button" aria-expanded="false" aria-controls="search-panel">
+          <button class="voice-toggle" type="button" aria-pressed="false" aria-label="Voice"><span aria-hidden="true">●</span><span>Voice</span></button>
+          <button class="search-button" type="button" aria-expanded="false" aria-controls="search-panel" aria-label="Search">
             <span>Search</span>
             <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
           </button>
@@ -130,7 +130,7 @@
           <div class="filter-status" id="filter-status" aria-live="polite">Showing all topics</div>
         </div>
         <div class="story-grid" id="story-grid"></div>
-        <p class="empty-state" id="empty-state" hidden>No notes match that search yet.</p>
+        <p class="empty-state" id="empty-state" hidden>No notes match that search yet. <button type="button" class="empty-clear" id="empty-clear-search">Clear search</button></p>
       </section>
 
       <section class="projects" id="projects" aria-labelledby="projects-title">
@@ -212,16 +212,16 @@
           <a class="reader-brand" href="#top">SYNERGY / EVIDENCE BRIEF</a>
           <div class="reader-progress" id="reader-progress" aria-label="Briefing progress"></div>
           <div class="reader-actions">
-            <button class="voice-toggle" type="button" aria-pressed="false"><span aria-hidden="true">●</span><span>Voice</span></button>
+            <button class="voice-toggle" type="button" aria-pressed="false" aria-label="Voice"><span aria-hidden="true">●</span><span>Voice</span></button>
             <button class="board-toggle" type="button" aria-expanded="false" aria-controls="prototype-board">Ideas <span id="board-count">0</span></button>
             <button class="reader-close" type="button" aria-label="Close briefing">Close</button>
           </div>
         </header>
 
-        <article class="reader-card" aria-live="polite">
+        <article class="reader-card">
           <div class="reader-card-topline">
             <p class="reader-kicker" id="reader-kicker"></p>
-            <p class="reader-count" id="reader-count"></p>
+            <p class="reader-count" id="reader-count" aria-live="polite"></p>
           </div>
           <div class="reader-copy">
             <p class="reader-disclosure">AI-assisted synthesis / inspect the evidence</p>
@@ -244,6 +244,7 @@
                 </header>
                 <p>Pair with the companion running on this device. OMP and Hermes open their own provider portals and retain subscription credentials locally; Synergy never receives the tokens.</p>
                 <div class="ai-secret companion-pairing">
+                  <label class="sr-only" for="companion-pairing-code">Pairing code from synergy-companion</label>
                   <input id="companion-pairing-code" type="password" autocomplete="off" spellcheck="false" placeholder="Pairing code from synergy-companion">
                   <button id="pair-companion" type="button">Pair</button>
                 </div>
@@ -301,44 +302,50 @@
         <aside class="prototype-board" id="prototype-board" aria-labelledby="prototype-board-title">
           <header class="prototype-board-header">
             <div>
-              <p>Live prototype / <span id="board-progress">0 of 5 explored</span></p>
-              <h2 id="prototype-board-title">Mini whiteboard</h2>
+              <p>Live sketch / <span id="board-progress">0 of 5 explored</span></p>
+              <h2 id="prototype-board-title">Mini canvas</h2>
             </div>
-            <button class="board-close" type="button" aria-label="Close prototype board">Close</button>
+            <button class="board-close" type="button" aria-label="Close sketch canvas">Close</button>
           </header>
-          <div class="prototype-board-scroll">
-            <p class="prototype-note">Your draft grows as you move through the brief. Nothing leaves this tab until you copy or download it.</p>
-            <div class="prototype-board-notes" id="prototype-board-notes" aria-live="polite"></div>
-            <div class="prototype-panel">
-              <div class="ai-field-row">
-                <label for="prototype-jurisdiction">Country or jurisdiction</label>
-                <input id="prototype-jurisdiction" type="text" placeholder="Example: Kenya / county government">
-              </div>
-              <div class="ai-field-row">
-                <label for="prototype-user">Who should this help?</label>
-                <input id="prototype-user" type="text" placeholder="Example: local heat-response coordinators">
-              </div>
-              <div class="ai-field-row">
-                <label for="prototype-idea">Solution hypothesis</label>
-                <textarea id="prototype-idea" rows="3" placeholder="Speak or type the smallest intervention worth testing."></textarea>
-              </div>
-              <div class="ai-field-row">
-                <label for="prototype-harness">Harness</label>
-                <select id="prototype-harness">
-                  <option value="claude">Claude Code</option>
-                  <option value="codex">Codex</option>
-                  <option value="hermes">Hermes</option>
-                  <option value="generic">Generic agent</option>
-                </select>
-              </div>
-              <button class="prototype-build" id="build-prototype" type="button">Build task bundle</button>
-              <p class="prototype-status" id="prototype-status" aria-live="polite"></p>
-              <div class="prototype-output" id="prototype-output" hidden>
-                <pre></pre>
-                <div>
-                  <button id="copy-prototype" type="button">Copy for harness</button>
-                  <button id="download-prototype" type="button">Download .md</button>
-                </div>
+
+          <div class="whiteboard-toolbar" aria-label="Sketch tools">
+            <button type="button" class="whiteboard-tool is-active" data-tool="pen" aria-pressed="true">Pen</button>
+            <button type="button" class="whiteboard-tool" data-tool="eraser" aria-pressed="false">Eraser</button>
+            <button type="button" class="whiteboard-tool" data-tool="sticky" aria-pressed="false">Sticky</button>
+            <button type="button" id="whiteboard-clear" class="whiteboard-tool whiteboard-tool-clear">Clear ink</button>
+          </div>
+
+          <div class="whiteboard-stage" id="whiteboard-stage">
+            <canvas id="whiteboard-ink" aria-label="Freehand sketch surface"></canvas>
+            <div class="whiteboard-stickies" id="whiteboard-stickies" aria-live="polite"></div>
+            <p class="whiteboard-empty" id="whiteboard-empty">Talk or draw. Insights from the brief land here as stickies.</p>
+          </div>
+
+          <div class="whiteboard-dock">
+            <div class="whiteboard-dock-grid">
+              <label class="sr-only" for="prototype-jurisdiction">Country or jurisdiction</label>
+              <input id="prototype-jurisdiction" type="text" placeholder="Jurisdiction">
+              <label class="sr-only" for="prototype-user">Who should this help?</label>
+              <input id="prototype-user" type="text" placeholder="Intended user">
+            </div>
+            <label class="sr-only" for="prototype-idea">Solution hypothesis</label>
+            <textarea id="prototype-idea" rows="2" placeholder="Speak the smallest intervention worth testing."></textarea>
+            <div class="whiteboard-dock-actions">
+              <label class="sr-only" for="prototype-harness">Harness</label>
+              <select id="prototype-harness">
+                <option value="claude">Claude Code</option>
+                <option value="codex">Codex</option>
+                <option value="hermes">Hermes</option>
+                <option value="generic">Generic agent</option>
+              </select>
+              <button class="prototype-build" id="build-prototype" type="button">Build task</button>
+            </div>
+            <p class="prototype-status" id="prototype-status" aria-live="polite"></p>
+            <div class="prototype-output" id="prototype-output" hidden>
+              <pre></pre>
+              <div>
+                <button id="copy-prototype" type="button">Copy for harness</button>
+                <button id="download-prototype" type="button">Download .md</button>
               </div>
             </div>
           </div>
@@ -360,6 +367,29 @@
       </div>
     </dialog>
     <p class="voice-status" id="voice-status" aria-live="polite"></p>
+    <aside class="syn-companion" id="syn-companion" aria-label="Synergy companion pet">
+      <div class="syn-bubble" id="syn-bubble" hidden aria-live="polite">
+        <p id="syn-bubble-text"></p>
+      </div>
+      <button class="syn-buddy" id="syn-buddy" type="button" aria-label="Syn, your page pet. Drag to move, click to poke.">
+        <svg class="syn-svg" viewBox="0 0 200 200" width="76" height="76" aria-hidden="true">
+          <defs>
+            <filter id="syn-soft" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#141312" flood-opacity=".28"/>
+            </filter>
+          </defs>
+          <g id="syn-face-root" filter="url(#syn-soft)">
+            <path id="syn-body-path" fill="#141312" d=""/>
+            <path id="syn-eye-l-path" fill="#f6f1e6" d=""/>
+            <path id="syn-eye-r-path" fill="#f6f1e6" d=""/>
+            <circle cx="148" cy="52" r="7" fill="#e5522d"/>
+            <circle cx="148" cy="52" r="2.6" fill="#d8ff65"/>
+          </g>
+        </svg>
+        <span class="syn-buddy-label">Syn</span>
+      </button>
+    </aside>
+
     <footer class="site-footer">
       <div class="shell footer-grid">
         <div class="footer-brand"><a href="#top">SYNERGY</a><p>Intelligence for people who act.</p></div>

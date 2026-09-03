@@ -1,4 +1,5 @@
 import { articles } from "./content.js";
+import { setupSynCompanion } from "./companion-bot.js";
 
 const dispatches = [
   {
@@ -78,11 +79,17 @@ const companionJob = document.querySelector("#companion-job");
 const companionCredentials = document.querySelector("#companion-credentials");
 const saveAiKeyButton = document.querySelector("#save-ai-key");
 const prototypeBoard = document.querySelector("#prototype-board");
-const prototypeBoardNotes = document.querySelector("#prototype-board-notes");
 const boardToggle = document.querySelector(".board-toggle");
 const boardClose = document.querySelector(".board-close");
 const boardCount = document.querySelector("#board-count");
 const boardProgress = document.querySelector("#board-progress");
+const whiteboardStage = document.querySelector("#whiteboard-stage");
+const whiteboardCanvas = document.querySelector("#whiteboard-ink");
+const whiteboardStickies = document.querySelector("#whiteboard-stickies");
+const whiteboardEmpty = document.querySelector("#whiteboard-empty");
+const whiteboardClear = document.querySelector("#whiteboard-clear");
+const whiteboardTools = [...document.querySelectorAll(".whiteboard-tool[data-tool]")];
+const whiteboardCtx = whiteboardCanvas.getContext("2d");
 const prototypeJurisdiction = document.querySelector("#prototype-jurisdiction");
 const prototypeUser = document.querySelector("#prototype-user");
 const prototypeIdea = document.querySelector("#prototype-idea");
@@ -104,6 +111,7 @@ const READER_PROGRESS_DURATION = 18000;
 const READER_INTERACTION_PAUSE = 900;
 const OPENROUTER_PENDING_KEY = "synergy.openrouter.pending";
 const COMPANION_URL = "http://127.0.0.1:4388";
+const STICKY_TILTS = [-3.4, 2.2, -1.6, 3.1, -2.5, 1.4, -0.8, 2.8];
 
 const prototypeDrafts = new Map();
 let activeTopic = "all";
@@ -127,6 +135,141 @@ let companionToken = "";
 let companionAdapters = [];
 let companionCredentialId = null;
 let companionJobTimer = null;
+let whiteboardTool = "pen";
+let whiteboardDrawing = false;
+let whiteboardStroke = null;
+let whiteboardDrag = null;
+let whiteboardResizeObserver = null;
+let whiteboardPointerRect = null;
+
+function createSynergyMotion() {
+  const root = document.documentElement;
+  let frame = null;
+  let pointerX = window.innerWidth / 2;
+  let pointerY = window.innerHeight / 2;
+  let scrollY = window.scrollY;
+  let gazePoint = null;
+  let magneticTarget = null;
+  let magneticRect = null;
+
+  function render() {
+    frame = null;
+    const reduced = prefersReducedMotion.matches;
+    root.style.setProperty("--reduced", reduced ? "1" : "0");
+    if (reduced) {
+      root.style.setProperty("--mx", "0");
+      root.style.setProperty("--my", "0");
+      root.style.setProperty("--scroll-y", "0");
+      root.style.setProperty("--scroll-progress", "0");
+      magneticTarget?.style.removeProperty("--magnetic-x");
+      magneticTarget?.style.removeProperty("--magnetic-y");
+      return;
+    }
+
+    const sampleX = gazePoint?.x ?? pointerX;
+    const sampleY = gazePoint?.y ?? pointerY;
+    root.style.setProperty("--mx", String((sampleX / Math.max(1, window.innerWidth) - 0.5) * 2));
+    root.style.setProperty("--my", String((sampleY / Math.max(1, window.innerHeight) - 0.5) * 2));
+    root.style.setProperty("--scroll-y", `${scrollY}px`);
+    const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    root.style.setProperty("--scroll-progress", String(Math.min(1, scrollY / scrollRange)));
+
+    if (magneticTarget && magneticRect) {
+      const x = Math.max(-1, Math.min(1, (pointerX - magneticRect.left) / magneticRect.width * 2 - 1));
+      const y = Math.max(-1, Math.min(1, (pointerY - magneticRect.top) / magneticRect.height * 2 - 1));
+      magneticTarget.style.setProperty("--magnetic-x", `${x * 2.5}px`);
+      magneticTarget.style.setProperty("--magnetic-y", `${y * 2}px`);
+    }
+  }
+
+  function schedule() {
+    if (frame === null) frame = requestAnimationFrame(render);
+  }
+
+  window.addEventListener("pointermove", (event) => {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    schedule();
+  }, { passive: true });
+  window.addEventListener("scroll", () => {
+    scrollY = window.scrollY;
+    schedule();
+  }, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+
+  document.addEventListener("pointerover", (event) => {
+    // Magnetic pull only with fine pointer + motion allowed (better-ui / a11y)
+    if (prefersReducedMotion.matches) return;
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches === false) return;
+    const target = event.target.closest(".search-button, .voice-toggle, .board-toggle, .newsletter button, .reader-arrow, .prototype-build, .whiteboard-tool");
+    if (!target || target === magneticTarget) return;
+    magneticTarget = target;
+    magneticRect = target.getBoundingClientRect();
+    schedule();
+  }, { passive: true });
+  document.addEventListener("pointerout", (event) => {
+    if (!magneticTarget || event.relatedTarget && magneticTarget.contains(event.relatedTarget)) return;
+    magneticTarget.style.removeProperty("--magnetic-x");
+    magneticTarget.style.removeProperty("--magnetic-y");
+    magneticTarget = null;
+    magneticRect = null;
+  }, { passive: true });
+
+  document.addEventListener("pointerdown", (event) => {
+    const control = event.target.closest("button, a, summary");
+    if (!control || whiteboardStage.contains(event.target)) return;
+    control.classList.add("is-pressed");
+    if (prefersReducedMotion.matches) return;
+    const rect = control.getBoundingClientRect();
+    const ink = document.createElement("i");
+    ink.className = "interaction-ink";
+    ink.setAttribute("aria-hidden", "true");
+    ink.style.setProperty("--ink-x", `${event.clientX - rect.left}px`);
+    ink.style.setProperty("--ink-y", `${event.clientY - rect.top}px`);
+    control.append(ink);
+    ink.addEventListener("animationend", () => ink.remove(), { once: true });
+  }, { passive: true });
+  ["pointerup", "pointercancel"].forEach((type) => {
+    document.addEventListener(type, () => {
+      document.querySelectorAll(".is-pressed").forEach((control) => control.classList.remove("is-pressed"));
+    }, { passive: true });
+  });
+
+  const api = {
+    setGazePoint(x, y) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      gazePoint = { x, y };
+      schedule();
+    },
+    clearGaze() {
+      gazePoint = null;
+      schedule();
+    },
+    setVoiceLive(active) {
+      root.style.setProperty("--voice-live", active ? "1" : "0");
+      root.classList.toggle("voice-is-live", Boolean(active));
+    },
+    refresh: schedule
+  };
+  prefersReducedMotion.addEventListener("change", schedule);
+  root.dataset.motion = "synergy";
+  root.dataset.motionApi = Object.keys(api).join(",");
+  const exportTarget = typeof globalThis !== "undefined" ? globalThis : window;
+  exportTarget.SynergyMotion = api;
+  // DOM channel so tooling in another JS world can still call the API.
+  root.addEventListener("synergy-motion", (event) => {
+    const detail = event.detail || {};
+    if (detail.op === "setGazePoint") api.setGazePoint(detail.x, detail.y);
+    else if (detail.op === "clearGaze") api.clearGaze();
+    else if (detail.op === "setVoiceLive") api.setVoiceLive(detail.active);
+    else if (detail.op === "refresh") api.refresh();
+  });
+  schedule();
+  return api;
+}
+
+const SynergyMotion = createSynergyMotion();
+
 
 function externalAttributes(url) {
   return url.startsWith("http") ? 'target="_blank" rel="noreferrer"' : "";
@@ -189,14 +332,26 @@ function applyFilters() {
   const activeLabel = activeTopic === "all"
     ? "all topics"
     : topicLinks.find((link) => link.dataset.topic === activeTopic)?.textContent.toLowerCase();
-  filterStatus.textContent = `Showing ${activeLabel}`;
+  const queryBit = searchTerm ? ` · “${searchInput.value.trim()}”` : "";
+  filterStatus.textContent = `Showing ${activeLabel}${queryBit}`;
   emptyState.hidden = visibleStories > 0;
+  if (visibleStories === 0) {
+    const q = searchInput.value.trim();
+    emptyState.innerHTML = q
+      ? `No notes match “${q}”. <button type="button" class="empty-clear" id="empty-clear-search">Clear search</button>`
+      : `No notes in this topic yet. <button type="button" class="empty-clear" id="empty-clear-search">Show all</button>`;
+  }
   searchCount.textContent = searchTerm ? `${matches} matching item${matches === 1 ? "" : "s"}` : "";
 }
 
 function setTopic(topic, selectedLink) {
   activeTopic = topic === "projects" ? "all" : topic;
-  topicLinks.forEach((link) => link.classList.toggle("is-active", link === selectedLink));
+  topicLinks.forEach((link) => {
+    const on = link === selectedLink;
+    link.classList.toggle("is-active", on);
+    if (on) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
+  });
   applyFilters();
 }
 
@@ -315,10 +470,8 @@ function setupSectionReveals() {
 
   const revealGroups = [
     ".hero > *",
-    ".briefing-inner > *",
-    ".stories-heading, .story-card",
-    ".projects-intro > *, .project-card",
-    ".principles-title, .principle-list article",
+    ".stories-heading",
+    ".projects-intro > *",
     ".newsletter-inner > *"
   ];
   const revealItems = [];
@@ -352,10 +505,178 @@ function getPrototypeDraft(article = currentArticle) {
       intendedUser: "",
       idea: "",
       harness: "claude",
-      bundle: ""
+      bundle: "",
+      strokes: [],
+      stickies: []
     });
   }
-  return prototypeDrafts.get(article.id);
+  const draft = prototypeDrafts.get(article.id);
+  if (!Array.isArray(draft.strokes)) draft.strokes = [];
+  if (!Array.isArray(draft.stickies)) draft.stickies = [];
+  return draft;
+}
+
+function stickyTilt(seed) {
+  return STICKY_TILTS[Math.abs(seed) % STICKY_TILTS.length];
+}
+
+function ensureBriefStickies(draft) {
+  if (!currentArticle) return;
+  [...draft.visited].forEach((index) => {
+    const id = `brief-${currentArticle.id}-${index}`;
+    if (draft.stickies.some((sticky) => sticky.id === id)) return;
+    const slide = currentArticle.slides[index];
+    if (!slide) return;
+    const column = draft.stickies.filter((sticky) => sticky.kind === "brief").length;
+    draft.stickies.push({
+      id,
+      kind: "brief",
+      label: `${String(index + 1).padStart(2, "0")} / ${slide.kind}`,
+      text: slide.title,
+      x: 8 + (column % 2) * 42,
+      y: 8 + Math.floor(column / 2) * 24,
+      tilt: stickyTilt(index + 3)
+    });
+  });
+}
+
+function ensureIdeaSticky(draft) {
+  const idea = draft.idea.trim();
+  const existing = draft.stickies.find((sticky) => sticky.kind === "idea");
+  if (!idea) {
+    if (existing) draft.stickies = draft.stickies.filter((sticky) => sticky.kind !== "idea");
+    return;
+  }
+  if (existing) {
+    existing.text = idea;
+    existing.label = voiceActive ? "Speaking now" : "Solution hypothesis";
+    existing.live = voiceActive;
+    return;
+  }
+  draft.stickies.push({
+    id: `idea-${currentArticle.id}`,
+    kind: "idea",
+    label: voiceActive ? "Speaking now" : "Solution hypothesis",
+    text: idea,
+    x: 48,
+    y: 58,
+    tilt: stickyTilt(11),
+    live: voiceActive
+  });
+}
+
+function resizeWhiteboardCanvas() {
+  const rect = whiteboardStage.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.floor(rect.width));
+  const height = Math.max(1, Math.floor(rect.height));
+  if (whiteboardCanvas.width !== Math.floor(width * ratio) || whiteboardCanvas.height !== Math.floor(height * ratio)) {
+    whiteboardCanvas.width = Math.floor(width * ratio);
+    whiteboardCanvas.height = Math.floor(height * ratio);
+    whiteboardCanvas.style.width = `${width}px`;
+    whiteboardCanvas.style.height = `${height}px`;
+    whiteboardCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  redrawWhiteboardInk();
+}
+
+function drawStroke(ctx, stroke) {
+  if (!stroke.points.length) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = stroke.width;
+  if (stroke.tool === "eraser") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.strokeStyle = "rgba(0,0,0,1)";
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = stroke.color;
+  }
+  ctx.beginPath();
+  stroke.points.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  });
+  ctx.stroke();
+  ctx.restore();
+}
+
+function redrawWhiteboardInk() {
+  const draft = getPrototypeDraft();
+  const width = whiteboardCanvas.clientWidth;
+  const height = whiteboardCanvas.clientHeight;
+  whiteboardCtx.clearRect(0, 0, width, height);
+  if (!draft) return;
+  draft.strokes.forEach((stroke) => drawStroke(whiteboardCtx, stroke));
+  if (whiteboardStroke) drawStroke(whiteboardCtx, whiteboardStroke);
+}
+
+function pointerToStage(event, rect = whiteboardPointerRect || whiteboardStage.getBoundingClientRect()) {
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
+
+function percentFromPoint(point) {
+  const width = Math.max(1, whiteboardStage.clientWidth);
+  const height = Math.max(1, whiteboardStage.clientHeight);
+  return {
+    x: Math.min(92, Math.max(2, (point.x / width) * 100)),
+    y: Math.min(88, Math.max(2, (point.y / height) * 100))
+  };
+}
+
+function setWhiteboardTool(tool) {
+  whiteboardTool = tool;
+  whiteboardStage.dataset.tool = tool;
+  whiteboardTools.forEach((button) => {
+    const active = button.dataset.tool === tool;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderWhiteboardStickies() {
+  const draft = getPrototypeDraft();
+  whiteboardStickies.replaceChildren();
+  if (!draft) {
+    whiteboardEmpty.classList.remove("is-hidden");
+    return;
+  }
+  ensureBriefStickies(draft);
+  ensureIdeaSticky(draft);
+  draft.stickies.forEach((sticky) => {
+    const note = document.createElement("article");
+    note.className = "whiteboard-sticky";
+    if (sticky.live) note.classList.add("is-live");
+    note.dataset.id = sticky.id;
+    note.dataset.kind = sticky.kind;
+    note.style.left = `${sticky.x}%`;
+    note.style.top = `${sticky.y}%`;
+    note.style.setProperty("--tilt", `${sticky.tilt}deg`);
+    const label = document.createElement("small");
+    label.textContent = sticky.label;
+    const body = document.createElement("p");
+    body.textContent = sticky.text;
+    note.append(label, body);
+    note.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = note.getBoundingClientRect();
+      whiteboardPointerRect = whiteboardStage.getBoundingClientRect();
+      whiteboardDrag = {
+        id: sticky.id,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top
+      };
+    });
+    whiteboardStickies.append(note);
+  });
+  const hasMarks = draft.stickies.length > 0 || draft.strokes.length > 0;
+  whiteboardEmpty.classList.toggle("is-hidden", hasMarks);
 }
 
 function renderPrototypeBoard() {
@@ -363,31 +684,9 @@ function renderPrototypeBoard() {
   if (!draft || !currentArticle) return;
   const visited = [...draft.visited].sort((left, right) => left - right);
   boardCount.textContent = String(visited.length);
-  boardProgress.textContent = `${visited.length} of ${currentArticle.slides.length} briefing insights collected`;
-  prototypeBoardNotes.replaceChildren();
-
-  visited.forEach((index) => {
-    const slide = currentArticle.slides[index];
-    const note = document.createElement("article");
-    note.className = "prototype-note";
-    const label = document.createElement("p");
-    label.textContent = `${String(index + 1).padStart(2, "0")} / ${slide.kind}`;
-    const title = document.createElement("h4");
-    title.textContent = slide.title;
-    note.append(label, title);
-    prototypeBoardNotes.append(note);
-  });
-
-  if (draft.idea.trim()) {
-    const ideaNote = document.createElement("article");
-    ideaNote.className = "prototype-note prototype-note-idea";
-    const label = document.createElement("p");
-    label.textContent = "Your solution hypothesis";
-    const body = document.createElement("span");
-    body.textContent = draft.idea.trim();
-    ideaNote.append(label, body);
-    prototypeBoardNotes.append(ideaNote);
-  }
+  boardProgress.textContent = `${visited.length} of ${currentArticle.slides.length} briefing insights on the board`;
+  resizeWhiteboardCanvas();
+  renderWhiteboardStickies();
 }
 
 function savePrototypeDraft() {
@@ -412,6 +711,7 @@ function loadPrototypeDraft() {
   prototypeOutput.hidden = !draft.bundle;
   prototypeOutput.querySelector("pre").textContent = draft.bundle;
   prototypeStatus.textContent = draft.bundle ? "Your last task bundle is restored in this tab." : "";
+  setWhiteboardTool("pen");
   renderPrototypeBoard();
 }
 
@@ -425,6 +725,10 @@ function recordCurrentSlide() {
 function openPrototypeBoard() {
   prototypeBoard.classList.add("is-open");
   boardToggle.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => {
+    resizeWhiteboardCanvas();
+    renderWhiteboardStickies();
+  });
   syncReaderProgress();
 }
 
@@ -432,6 +736,105 @@ function closePrototypeBoard() {
   prototypeBoard.classList.remove("is-open");
   boardToggle.setAttribute("aria-expanded", "false");
   syncReaderProgress();
+}
+
+function beginWhiteboardStroke(event) {
+  whiteboardPointerRect = whiteboardStage.getBoundingClientRect();
+  if (whiteboardTool === "sticky") {
+    const draft = getPrototypeDraft();
+    if (!draft || !currentArticle) return;
+    const point = percentFromPoint(pointerToStage(event));
+    const id = `note-${Date.now()}`;
+    draft.stickies.push({
+      id,
+      kind: "note",
+      label: "Manual sticky",
+      text: "New note — edit in the idea box or drag me.",
+      x: point.x,
+      y: point.y,
+      tilt: stickyTilt(draft.stickies.length + 5)
+    });
+    renderWhiteboardStickies();
+    return;
+  }
+  const point = pointerToStage(event);
+  whiteboardDrawing = true;
+  whiteboardStroke = {
+    tool: whiteboardTool,
+    color: "#1f1a12",
+    width: whiteboardTool === "eraser" ? 22 : 2.4,
+    points: [point]
+  };
+  whiteboardStage.setPointerCapture(event.pointerId);
+  redrawWhiteboardInk();
+}
+
+function extendWhiteboardStroke(event) {
+  if (whiteboardDrag) {
+    const draft = getPrototypeDraft();
+    const sticky = draft?.stickies.find((item) => item.id === whiteboardDrag.id);
+    if (!sticky) return;
+    const rect = whiteboardPointerRect || whiteboardStage.getBoundingClientRect();
+    const point = {
+      x: Math.min(92, Math.max(2, ((event.clientX - rect.left - whiteboardDrag.offsetX + 20) / Math.max(1, rect.width)) * 100)),
+      y: Math.min(88, Math.max(2, ((event.clientY - rect.top - whiteboardDrag.offsetY + 12) / Math.max(1, rect.height)) * 100))
+    };
+    sticky.x = point.x;
+    sticky.y = point.y;
+    const node = whiteboardStickies.querySelector(`[data-id="${sticky.id}"]`);
+    if (node) {
+      node.style.left = `${sticky.x}%`;
+      node.style.top = `${sticky.y}%`;
+    }
+    return;
+  }
+  if (!whiteboardDrawing || !whiteboardStroke) return;
+  const samples = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [event];
+  samples.forEach((sample) => whiteboardStroke.points.push(pointerToStage(sample)));
+  redrawWhiteboardInk();
+}
+
+function endWhiteboardStroke() {
+  if (whiteboardDrag) {
+    whiteboardDrag = null;
+    whiteboardPointerRect = null;
+    return;
+  }
+  if (!whiteboardDrawing || !whiteboardStroke) return;
+  const draft = getPrototypeDraft();
+  if (draft && whiteboardStroke.points.length > 1) {
+    draft.strokes.push(whiteboardStroke);
+  }
+  whiteboardDrawing = false;
+  whiteboardStroke = null;
+  redrawWhiteboardInk();
+  renderWhiteboardStickies();
+  whiteboardPointerRect = null;
+}
+
+function clearWhiteboardInk() {
+  const draft = getPrototypeDraft();
+  if (!draft) return;
+  draft.strokes = [];
+  redrawWhiteboardInk();
+  renderWhiteboardStickies();
+}
+
+function setupWhiteboard() {
+  setWhiteboardTool("pen");
+  whiteboardTools.forEach((button) => {
+    button.addEventListener("click", () => setWhiteboardTool(button.dataset.tool));
+  });
+  whiteboardClear.addEventListener("click", clearWhiteboardInk);
+  whiteboardStage.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    beginWhiteboardStroke(event);
+  });
+  window.addEventListener("pointermove", extendWhiteboardStroke);
+  window.addEventListener("pointerup", endWhiteboardStroke);
+  window.addEventListener("pointercancel", endWhiteboardStroke);
+  whiteboardResizeObserver = new ResizeObserver(() => resizeWhiteboardCanvas());
+  whiteboardResizeObserver.observe(whiteboardStage);
 }
 
 function renderReaderSlide() {
@@ -480,6 +883,7 @@ function openArticle(articleId) {
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
+  placeVoiceStatus();
   resetReaderProgress();
 }
 
@@ -1066,14 +1470,33 @@ function downloadPrototypeBundle() {
   prototypeStatus.textContent = "Task bundle downloaded. Review it before starting a harness.";
 }
 
+function placeVoiceStatus() {
+  // Modal dialogs use the top layer; keep status visible by seating it inside the open dialog.
+  const host = reader.open ? reader.querySelector(".reader-actions") || readerStage : document.body;
+  if (voiceStatus.parentElement !== host) host.appendChild(voiceStatus);
+  voiceStatus.classList.toggle("is-in-reader", reader.open);
+}
+
+function setVoiceStatus(message) {
+  placeVoiceStatus();
+  voiceStatus.textContent = message;
+}
+
 function setVoiceUi(active) {
+  SynergyMotion.setVoiceLive(active);
   voiceActive = active;
   voiceButtons.forEach((button) => {
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
+    button.setAttribute("aria-label", active ? "Stop voice" : "Voice");
     const label = button.querySelector("span:last-child");
     if (label) label.textContent = active ? "Stop" : "Voice";
   });
+  if (!active && reader.open) {
+    const draft = getPrototypeDraft();
+    if (draft) draft.idea = prototypeIdea.value;
+  }
+  if (reader.open) renderWhiteboardStickies();
 }
 
 function getVoiceDestination() {
@@ -1107,12 +1530,12 @@ function stopVoiceDictation(message = "Microphone stopped.") {
     voiceRecognition = null;
   }
   setVoiceUi(false);
-  voiceStatus.textContent = message;
+  setVoiceStatus(message);
 }
 
 function startVoiceDictation() {
   if (!SpeechRecognitionApi) {
-    voiceStatus.textContent = "This browser does not support native speech recognition.";
+    setVoiceStatus("This browser does not support native speech recognition.");
     return;
   }
 
@@ -1125,7 +1548,7 @@ function startVoiceDictation() {
 
   recognition.addEventListener("start", () => {
     setVoiceUi(true);
-    voiceStatus.textContent = "Listening. Press Stop when you are finished.";
+    setVoiceStatus("Listening. Press Stop when you are finished.");
   });
   recognition.addEventListener("result", (event) => {
     let interim = "";
@@ -1134,30 +1557,41 @@ function startVoiceDictation() {
       if (result.isFinal) appendVoiceTranscript(voiceTarget, result[0].transcript);
       else interim += result[0].transcript;
     }
-    voiceStatus.textContent = interim
+    if (interim && voiceTarget === prototypeIdea) {
+      const draft = getPrototypeDraft();
+      if (draft) {
+        const preview = `${prototypeIdea.value}${prototypeIdea.value && !prototypeIdea.value.endsWith(" ") ? " " : ""}${interim}`.trim();
+        draft.idea = preview;
+        ensureIdeaSticky(draft);
+        const existing = draft.stickies.find((sticky) => sticky.kind === "idea");
+        if (existing) existing.live = true;
+        renderWhiteboardStickies();
+      }
+    }
+    setVoiceStatus(interim
       ? `Listening: ${interim}`
-      : "Listening. Press Stop when you are finished.";
+      : "Listening. Press Stop when you are finished.");
   });
   recognition.addEventListener("error", (event) => {
-    voiceStatus.textContent = event.error === "not-allowed"
+    setVoiceStatus(event.error === "not-allowed"
       ? "Microphone access was not granted."
-      : `Voice recognition stopped: ${event.error}.`;
+      : `Voice recognition stopped: ${event.error}.`);
   });
   recognition.addEventListener("end", () => {
     if (voiceRecognition === recognition) voiceRecognition = null;
     setVoiceUi(false);
     if (!voiceStatus.textContent.includes("not granted") && !voiceStatus.textContent.includes("stopped:")) {
-      voiceStatus.textContent = "Microphone stopped.";
+      setVoiceStatus("Microphone stopped.");
     }
   });
 
   try {
-    voiceStatus.textContent = "Waiting for browser microphone access…";
+    setVoiceStatus("Waiting for browser microphone access…");
     recognition.start();
   } catch {
     voiceRecognition = null;
     setVoiceUi(false);
-    voiceStatus.textContent = "Voice recognition could not start.";
+    setVoiceStatus("Voice recognition could not start.");
   }
 }
 
@@ -1165,8 +1599,7 @@ topicLinks.forEach((link) => {
   link.addEventListener("click", () => {
     setTopic(link.dataset.topic, link);
     if (window.innerWidth <= 760) {
-      siteNav.classList.remove("is-open");
-      menuButton.setAttribute("aria-expanded", "false");
+      setMenuOpen(false);
     }
   });
 });
@@ -1183,10 +1616,26 @@ searchInput.addEventListener("input", () => {
   applyFilters();
 });
 
+function setMenuOpen(open) {
+  siteNav.classList.toggle("is-open", open);
+  menuButton.setAttribute("aria-expanded", String(open));
+  menuButton.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  const label = document.querySelector("#menu-button-label");
+  if (label) label.textContent = open ? "Close menu" : "Open menu";
+}
+
 menuButton.addEventListener("click", () => {
-  const willOpen = !siteNav.classList.contains("is-open");
-  siteNav.classList.toggle("is-open", willOpen);
-  menuButton.setAttribute("aria-expanded", String(willOpen));
+  setMenuOpen(!siteNav.classList.contains("is-open"));
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target.id === "empty-clear-search" || event.target.closest?.("#empty-clear-search")) {
+    searchInput.value = "";
+    searchTerm = "";
+    setTopic("all", topicLinks.find((link) => link.dataset.topic === "all") || topicLinks[0]);
+    applyFilters();
+    searchInput.focus();
+  }
 });
 
 document.addEventListener("click", (event) => {
@@ -1241,7 +1690,7 @@ voiceButtons.forEach((button) => {
       return;
     }
     if (!SpeechRecognitionApi) {
-      voiceStatus.textContent = "This browser does not support native speech recognition.";
+      setVoiceStatus("This browser does not support native speech recognition.");
       return;
     }
     if (voiceConsentGiven) {
@@ -1300,8 +1749,22 @@ reader.addEventListener("close", () => {
   currentArticle = null;
   closePrototypeBoard();
   if (voiceTarget && reader.contains(voiceTarget)) stopVoiceDictation();
+  placeVoiceStatus();
 });
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    if (siteNav.classList.contains("is-open")) {
+      setMenuOpen(false);
+      menuButton.focus();
+      return;
+    }
+    if (!searchPanel.hidden) {
+      searchPanel.hidden = true;
+      searchButton.setAttribute("aria-expanded", "false");
+      searchButton.focus();
+      return;
+    }
+  }
   if (event.target.matches("input, textarea, select, button, a, summary, [contenteditable='true']")) return;
   if (reader.open) {
     pauseReaderProgressBriefly();
@@ -1313,12 +1776,6 @@ document.addEventListener("keydown", (event) => {
       event.preventDefault();
       previousSlide();
     }
-    return;
-  }
-  if (event.key === "Escape" && !searchPanel.hidden) {
-    searchPanel.hidden = true;
-    searchButton.setAttribute("aria-expanded", "false");
-    searchButton.focus();
   }
 });
 window.addEventListener("pagehide", () => stopVoiceDictation());
@@ -1337,9 +1794,11 @@ document.querySelector("#current-date").textContent = new Intl.DateTimeFormat("e
 }).format(today);
 document.querySelector("#current-year").textContent = today.getFullYear();
 completeOpenRouterConnection();
+setupSynCompanion({ motion: SynergyMotion });
 
 configureCompanionTransport();
 renderDispatches();
 renderStories();
 applyFilters();
 setupSectionReveals();
+setupWhiteboard();
