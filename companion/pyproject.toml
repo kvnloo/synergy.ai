@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synergy-local-companion"
+version = "0.1.0"
+description = "Local-only encrypted credential and provider bridge for Synergy"
+requires-python = ">=3.11"
+dependencies = [
+  "argon2-cffi>=23.1,<26",
+  "cryptography>=44,<47",
+  "keyring>=25,<27",
+  "platformdirs>=4,<5",
+]
+
+[project.scripts]
+synergy-companion = "synergy_companion.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["synergy_companion"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

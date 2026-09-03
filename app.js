@@ -65,6 +65,16 @@ const connectOpenRouterButton = document.querySelector("#connect-openrouter");
 const disconnectOpenRouterButton = document.querySelector("#disconnect-openrouter");
 const openRouterKeySettings = document.querySelector("#openrouter-key-settings");
 const aiConnectionLabel = document.querySelector("#ai-connection-label");
+const companionPairingCode = document.querySelector("#companion-pairing-code");
+const pairCompanionButton = document.querySelector("#pair-companion");
+const companionStatus = document.querySelector("#companion-status");
+const companionControls = document.querySelector("#companion-controls");
+const companionAdapterInput = document.querySelector("#companion-adapter");
+const companionProviderInput = document.querySelector("#companion-provider");
+const startProviderLoginButton = document.querySelector("#start-provider-login");
+const companionJob = document.querySelector("#companion-job");
+const companionCredentials = document.querySelector("#companion-credentials");
+const saveAiKeyButton = document.querySelector("#save-ai-key");
 const prototypeBoard = document.querySelector("#prototype-board");
 const prototypeBoardNotes = document.querySelector("#prototype-board-notes");
 const boardToggle = document.querySelector(".board-toggle");
@@ -91,6 +101,7 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const READER_PROGRESS_DURATION = 18000;
 const READER_INTERACTION_PAUSE = 900;
 const OPENROUTER_PENDING_KEY = "synergy.openrouter.pending";
+const COMPANION_URL = "http://127.0.0.1:4388";
 
 const prototypeDrafts = new Map();
 let activeTopic = "all";
@@ -110,6 +121,10 @@ let voiceActive = false;
 let voiceConsentGiven = false;
 let voiceTarget = null;
 let openRouterKey = "";
+let companionToken = "";
+let companionAdapters = [];
+let companionCredentialId = null;
+let companionJobTimer = null;
 
 function externalAttributes(url) {
   return url.startsWith("http") ? 'target="_blank" rel="noreferrer"' : "";
@@ -583,11 +598,13 @@ function setOpenRouterConnected(key) {
 
 function disconnectOpenRouter() {
   openRouterKey = "";
-  aiConnectionLabel.textContent = "Connect";
+  aiConnectionLabel.textContent = companionCredentialId ? "Local vault" : "Connect";
   connectOpenRouterButton.hidden = false;
   disconnectOpenRouterButton.hidden = true;
   openRouterKeySettings.href = "https://openrouter.ai/settings/keys";
-  aiStatus.textContent = "Disconnected in this tab. Use OpenRouter key settings to revoke the remote key.";
+  aiStatus.textContent = companionCredentialId
+    ? "Direct key disconnected. The encrypted local-vault credential remains available."
+    : "Disconnected in this tab. Use OpenRouter key settings to revoke the remote key.";
 }
 
 async function loadOpenRouterModels(apiKey = "") {
@@ -670,13 +687,198 @@ async function completeOpenRouterConnection() {
   }
 }
 
+async function companionRequest(path, options = {}, token = companionToken) {
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+  const response = await fetch(`${COMPANION_URL}${path}`, { ...options, headers });
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+  if (!response.ok) throw new Error(payload.error || `Local companion returned ${response.status}.`);
+  return payload;
+}
+
+function disconnectCompanion() {
+  window.clearTimeout(companionJobTimer);
+  companionToken = "";
+  companionAdapters = [];
+  companionCredentialId = null;
+  companionPairingCode.value = "";
+  companionControls.hidden = true;
+  saveAiKeyButton.hidden = true;
+  pairCompanionButton.textContent = "Pair";
+  companionStatus.textContent = "Disconnected from the local companion.";
+  companionCredentials.replaceChildren();
+  if (!openRouterKey) aiConnectionLabel.textContent = "Connect";
+}
+
+function renderCompanionProviders() {
+  const adapter = companionAdapters.find((item) => item.id === companionAdapterInput.value);
+  companionProviderInput.replaceChildren();
+  (adapter?.providers || []).forEach((provider) => {
+    companionProviderInput.add(new Option(provider.label, provider.id));
+  });
+  startProviderLoginButton.disabled = !adapter || adapter.providers.length === 0;
+}
+
+async function deleteLocalCredential(credential) {
+  await companionRequest(`/v1/credentials/${encodeURIComponent(credential.id)}`, { method: "DELETE" });
+  if (companionCredentialId === credential.id) {
+    companionCredentialId = null;
+    if (!openRouterKey) aiConnectionLabel.textContent = "Connect";
+  }
+  await refreshLocalCredentials();
+}
+
+async function refreshLocalCredentials() {
+  const credentials = await companionRequest("/v1/credentials");
+  companionCredentials.replaceChildren();
+  companionCredentialId = credentials
+    .filter((credential) => credential.provider === "openrouter")
+    .at(-1)?.id || null;
+  if (companionCredentialId) aiConnectionLabel.textContent = "Local vault";
+
+  credentials.forEach((credential) => {
+    const row = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = `${credential.provider} / ${credential.label}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", async () => {
+      try {
+        await deleteLocalCredential(credential);
+        companionStatus.textContent = "Encrypted credential deleted from this device.";
+      } catch (error) {
+        companionStatus.textContent = error.message;
+      }
+    });
+    row.append(label, remove);
+    companionCredentials.append(row);
+  });
+}
+
+async function pairCompanion() {
+  if (companionToken) {
+    disconnectCompanion();
+    return;
+  }
+  const token = companionPairingCode.value.trim();
+  if (!token) {
+    companionStatus.textContent = "Enter the pairing code printed by synergy-companion.";
+    companionPairingCode.focus();
+    return;
+  }
+  pairCompanionButton.disabled = true;
+  companionStatus.textContent = "Pairing with the local companion…";
+  try {
+    const adapters = await companionRequest("/v1/adapters", {}, token);
+    companionToken = token;
+    companionAdapters = adapters.filter((adapter) => adapter.installed);
+    companionPairingCode.value = "";
+    companionAdapterInput.replaceChildren();
+    companionAdapters.forEach((adapter) => {
+      companionAdapterInput.add(new Option(adapter.label, adapter.id));
+    });
+    renderCompanionProviders();
+    companionControls.hidden = false;
+    saveAiKeyButton.hidden = false;
+    pairCompanionButton.textContent = "Disconnect";
+    companionStatus.textContent = companionAdapters.length
+      ? `Paired locally. ${companionAdapters.map((adapter) => adapter.label).join(" and ")} detected.`
+      : "Paired locally, but neither OMP nor Hermes is installed.";
+    await refreshLocalCredentials();
+  } catch (error) {
+    disconnectCompanion();
+    companionStatus.textContent = `Pairing failed: ${error.message}`;
+  } finally {
+    pairCompanionButton.disabled = false;
+  }
+}
+
+async function pollCompanionJob(jobId) {
+  try {
+    const job = await companionRequest(`/v1/jobs/${encodeURIComponent(jobId)}`);
+    companionJob.hidden = false;
+    companionJob.textContent = job.output || `${job.status}…`;
+    if (job.status === "pending" || job.status === "running") {
+      companionJobTimer = window.setTimeout(() => pollCompanionJob(jobId), 1000);
+      return;
+    }
+    startProviderLoginButton.disabled = false;
+    companionStatus.textContent = job.status === "completed"
+      ? `${job.adapter.toUpperCase()} completed ${job.provider} sign-in on this device.`
+      : `${job.adapter.toUpperCase()} could not complete ${job.provider} sign-in.`;
+  } catch (error) {
+    startProviderLoginButton.disabled = false;
+    companionStatus.textContent = `Authentication status failed: ${error.message}`;
+  }
+}
+
+async function startProviderLogin() {
+  startProviderLoginButton.disabled = true;
+  companionJob.hidden = false;
+  companionJob.textContent = "Starting the provider's local authentication flow…";
+  try {
+    const job = await companionRequest("/v1/auth/start", {
+      method: "POST",
+      body: JSON.stringify({
+        adapter: companionAdapterInput.value,
+        provider: companionProviderInput.value
+      })
+    });
+    pollCompanionJob(job.id);
+  } catch (error) {
+    startProviderLoginButton.disabled = false;
+    companionStatus.textContent = `Could not start sign-in: ${error.message}`;
+  }
+}
+
+async function saveOpenRouterKeyLocally() {
+  const secret = openRouterKey || aiKeyInput.value.trim();
+  if (!secret || !companionToken) {
+    companionStatus.textContent = "Pair the local companion and connect or enter an OpenRouter key first.";
+    return;
+  }
+  saveAiKeyButton.disabled = true;
+  try {
+    const credential = await companionRequest("/v1/credentials", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: "openrouter",
+        label: `Saved ${new Date().toLocaleDateString()}`,
+        secret
+      })
+    });
+    companionCredentialId = credential.id;
+    openRouterKey = "";
+    connectOpenRouterButton.hidden = false;
+    disconnectOpenRouterButton.hidden = true;
+    openRouterKeySettings.href = "https://openrouter.ai/settings/keys";
+    aiKeyInput.value = "";
+    aiConnectionLabel.textContent = "Local vault";
+    aiStatus.textContent = "OpenRouter key moved into the encrypted local vault.";
+    await refreshLocalCredentials();
+  } catch (error) {
+    companionStatus.textContent = `Credential storage failed: ${error.message}`;
+  } finally {
+    saveAiKeyButton.disabled = false;
+  }
+}
+
 async function askArticleQuestion() {
   const apiKey = openRouterKey || aiKeyInput.value.trim();
   const question = aiQuestionInput.value.trim();
   const model = aiModelInput.value.trim() || "openrouter/free";
 
-  if (!apiKey) {
-    aiStatus.textContent = "Connect OpenRouter or enter an existing key.";
+  if (!apiKey && !companionCredentialId) {
+    aiStatus.textContent = "Pair the local companion, connect OpenRouter, or enter an existing key.";
     connectOpenRouterButton.focus();
     return;
   }
@@ -692,33 +894,45 @@ async function askArticleQuestion() {
   askAiButton.disabled = true;
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": window.location.origin,
-        "X-Title": "Synergy Evidence Briefs"
+    const messages = [
+      {
+        role: "system",
+        content: "You are the evidence guide for Synergy. Answer only from the supplied article dossier. Explain causal mechanisms, prior interventions, reasons results differed, and constraints on transfer across countries when relevant. Cite the source register with bracketed numbers such as [1]. Separate sourced statements from your interpretation. If the dossier cannot answer part of the question, say what evidence is missing. Do not invent facts, outcomes, laws, or citations."
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: "You are the evidence guide for Synergy. Answer only from the supplied article dossier. Explain causal mechanisms, prior interventions, reasons results differed, and constraints on transfer across countries when relevant. Cite the source register with bracketed numbers such as [1]. Separate sourced statements from your interpretation. If the dossier cannot answer part of the question, say what evidence is missing. Do not invent facts, outcomes, laws, or citations."
-          },
-          {
-            role: "user",
-            content: `${buildArticleContext(currentArticle)}\n\nREADER QUESTION:\n${question}`
-          }
-        ]
-      })
-    });
+      {
+        role: "user",
+        content: `${buildArticleContext(currentArticle)}\n\nREADER QUESTION:\n${question}`
+      }
+    ];
+    const useCompanion = Boolean(companionCredentialId && companionToken);
+    const response = await fetch(
+      useCompanion ? `${COMPANION_URL}/v1/chat/completions` : "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: useCompanion
+          ? {
+              "Authorization": `Bearer ${companionToken}`,
+              "Content-Type": "application/json"
+            }
+          : {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": window.location.origin,
+              "X-Title": "Synergy Evidence Briefs"
+            },
+        body: JSON.stringify({
+          ...(useCompanion ? { credential_id: companionCredentialId } : {}),
+          model,
+          temperature: 0.2,
+          messages
+        })
+      }
+    );
 
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.error?.message || `OpenRouter returned ${response.status}.`);
+      const message = typeof payload.error === "string" ? payload.error : payload.error?.message;
+      throw new Error(message || `${useCompanion ? "Local companion" : "OpenRouter"} returned ${response.status}.`);
     }
     const answer = payload.choices?.[0]?.message?.content;
     if (!answer) throw new Error("The model returned no answer.");
@@ -993,6 +1207,10 @@ boardToggle.addEventListener("click", () => {
 });
 connectOpenRouterButton.addEventListener("click", beginOpenRouterConnection);
 disconnectOpenRouterButton.addEventListener("click", disconnectOpenRouter);
+pairCompanionButton.addEventListener("click", pairCompanion);
+companionAdapterInput.addEventListener("change", renderCompanionProviders);
+startProviderLoginButton.addEventListener("click", startProviderLogin);
+saveAiKeyButton.addEventListener("click", saveOpenRouterKeyLocally);
 boardClose.addEventListener("click", closePrototypeBoard);
 [prototypeJurisdiction, prototypeUser, prototypeIdea, prototypeHarness].forEach((field) => {
   field.addEventListener("input", savePrototypeDraft);

@@ -6,7 +6,7 @@
     <meta name="description" content="Synergy connects humanitarian reporting, primary sources, and practical projects for people who want to help.">
     <meta name="theme-color" content="#f3efe4">
     <meta name="referrer" content="no-referrer">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://openrouter.ai; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://openrouter.ai http://127.0.0.1:4388; object-src 'none'; base-uri 'self'; form-action 'self'">
     <title>Synergy | Intelligence for people who act</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -237,7 +237,32 @@
           <details class="ai-drawer" id="ai-drawer">
             <summary><span>Ask AI about this brief</span><span id="ai-connection-label">Connect</span></summary>
             <div class="ai-panel">
-              <p class="ai-routing">Connects your OpenRouter account with its official PKCE flow. The returned user-controlled key lives only in memory until this tab closes. OpenRouter usage is billed or limited by OpenRouter; this does not import ChatGPT, Claude, or Gemini consumer subscriptions.</p>
+              <section class="companion-panel" aria-labelledby="companion-title">
+                <header>
+                  <div><p>On-device provider access</p><h3 id="companion-title">Synergy Local Companion</h3></div>
+                  <span>Encrypted / loopback</span>
+                </header>
+                <p>Pair with the companion running on this device. OMP and Hermes open their own provider portals and retain subscription credentials locally; Synergy never receives the tokens.</p>
+                <div class="ai-secret companion-pairing">
+                  <input id="companion-pairing-code" type="password" autocomplete="off" spellcheck="false" placeholder="Pairing code from synergy-companion">
+                  <button id="pair-companion" type="button">Pair</button>
+                </div>
+                <p class="companion-status" id="companion-status" aria-live="polite">Start <code>synergy-companion</code> locally, then enter its pairing code.</p>
+                <div class="companion-controls" id="companion-controls" hidden>
+                  <div class="ai-field-row">
+                    <label for="companion-adapter">Authentication authority</label>
+                    <select id="companion-adapter"></select>
+                  </div>
+                  <div class="ai-field-row">
+                    <label for="companion-provider">Subscription provider</label>
+                    <select id="companion-provider"></select>
+                  </div>
+                  <button class="ai-submit" id="start-provider-login" type="button">Open provider sign-in</button>
+                  <pre class="companion-job" id="companion-job" hidden></pre>
+                  <div class="companion-credentials" id="companion-credentials"></div>
+                </div>
+              </section>
+              <p class="ai-routing">Without the companion, OpenRouter remains available through its official browser PKCE flow. The returned user-controlled key lives only in memory until this tab closes.</p>
               <div class="ai-connect-row">
                 <button id="connect-openrouter" type="button">Connect OpenRouter</button>
                 <button id="disconnect-openrouter" type="button" hidden>Disconnect</button>
@@ -250,6 +275,7 @@
                   <div class="ai-secret">
                     <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
                     <button id="clear-ai-key" type="button">Clear</button>
+                    <button id="save-ai-key" type="button" hidden>Store locally</button>
                   </div>
                 </div>
               </details>

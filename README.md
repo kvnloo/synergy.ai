@@ -33,13 +33,27 @@ The current briefs are AI-assisted editorial drafts. Each reader panel exposes t
 
 ## Optional AI access
 
-There is no unlimited hosted LLM with a permanent free guarantee. The reader uses OpenRouter's `openrouter/free` route as a best-effort option, subject to OpenRouter's account, model, rate, and availability limits. The primary connection uses [OpenRouter's documented OAuth PKCE flow](https://openrouter.ai/docs/guides/overview/auth/oauth): the browser generates an S256 verifier, OpenRouter authorizes the user, and the returned user-controlled key remains only in JavaScript memory until the tab closes. An advanced field accepts an existing OpenRouter key without persisting it.
+There is no unlimited hosted LLM with a permanent free guarantee. Without local software, the reader uses OpenRouter's `openrouter/free` route as a best-effort option, subject to OpenRouter's account, model, rate, and availability limits. The browser flow follows [OpenRouter's documented OAuth PKCE flow](https://openrouter.ai/docs/guides/overview/auth/oauth). Its returned user-controlled key remains in JavaScript memory until the tab closes.
 
-The static site sends requests directly from the reader's browser to `https://openrouter.ai/api/v1/chat/completions`. Synergy has no proxy and never receives the key. It does not place keys in cookies, local storage, URLs, logs, analytics, or service-worker caches. PKCE protects the authorization-code exchange, not the resulting bearer key; the interface therefore exposes Disconnect and OpenRouter's remote revocation page. Do not replace this with a developer-owned key in client JavaScript.
+The optional local companion adds encrypted on-device storage and first-class authentication adapters for Oh My Pi and Hermes Agent:
 
-OpenRouter is a gateway account, not a universal subscription importer. ChatGPT/Codex entitlements, Claude/Claude Code OAuth, Gemini CLI/Code Assist quota, Copilot, and provider API billing are separate authorization surfaces. Supporting those directly requires an optional trusted local companion or backend with provider-specific approval, endpoint allowlists, refresh locking, OS credential storage, exact-origin CORS, and a per-install pairing secret. It must bind only to loopback and must never upload CLI credential files, browser cookies, or long-lived tokens to this site.
+```sh
+python -m venv .venv
+.venv/bin/pip install -e companion
+.venv/bin/synergy-companion
+```
 
-Each request includes the open article's full five-part brief, causal chains, numbered source register, source relationship labels, and the reader's question. The system instruction requires bracketed source citations, separates interpretation from sourced statements, and asks the model to name missing evidence rather than invent it.
+Enter the pairing code printed by the companion in the reader. The code remains only in page memory. The companion binds to `127.0.0.1:4388`, accepts only an exact origin allowlist, requires the pairing code on every privileged request, and does not log request bodies or provider output.
+
+The companion's own vault is an authenticated AES-256-GCM envelope. Its random master key is stored in the operating-system keychain when available. If no usable keychain exists, startup requires a passphrase and derives the key with Argon2id; there is no plaintext fallback. Pairing codes and manually saved OpenRouter keys are encrypted at rest. The browser can list credential labels and delete entries, but the listing endpoint never returns secrets.
+
+Oh My Pi authentication runs through `omp auth-broker login <provider>` and discovers available providers from `omp auth-broker list --json`. Hermes authentication runs through `hermes auth add <provider> --type oauth`; the allowlist covers Anthropic, Nous Portal, ChatGPT Codex, xAI, Qwen, and MiniMax OAuth as exposed by Hermes. OMP and Hermes retain subscription credentials in their own local stores. Synergy receives job status and redacted command output, never their access tokens, refresh tokens, browser cookies, or credential files.
+
+These adapters authenticate provider subscriptions; they do not pretend those subscriptions are interchangeable API entitlements. The evidence Q&A path currently uses OpenRouter, either directly from tab memory or through an OpenRouter key in the local encrypted vault. Adding inference through OMP or Hermes requires a separately constrained execution contract so an evidence question cannot become an arbitrary coding-agent or tool invocation.
+
+OpenRouter is a gateway account, not a universal subscription importer. ChatGPT/Codex, Claude/Claude Code, Gemini CLI/Code Assist, Copilot, and provider API billing expose separate authorization and entitlement surfaces. No standard OAuth aggregator converts those consumer subscriptions into one credential.
+
+Each request includes the open article's full five-part brief, causal chains, numbered source register, source relationship labels, and the reader's question. The system instruction requires bracketed source citations, separates interpretation from sourced statements, and asks the model to name missing evidence rather than invent it. When an OpenRouter key is in the local vault, the companion decrypts it only for the outbound OpenRouter request; Synergy has no hosted proxy and does not receive the key.
 
 ## Harness handoff
 
