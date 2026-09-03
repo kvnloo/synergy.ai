@@ -39,4 +39,12 @@ The static site sends requests directly from the reader's browser to `https://op
 
 Each request includes the open article's full five-part brief, causal chains, numbered source register, source relationship labels, and the reader's question. The system instruction requires bracketed source citations, separates interpretation from sourced statements, and asks the model to name missing evidence rather than invent it.
 
+## Harness handoff
+
+Every editorial headline on the homepage opens an internal evidence brief. Primary sources remain one level deeper in the evidence drawer so the first click teaches the issue instead of sending the reader away.
+
+The "Prototype a response" drawer turns the open brief into a bounded Markdown task for Claude Code, Codex, Hermes, or another coding agent. The task includes the problem, causal chain, prior approaches, source register, target jurisdiction, intended user, proposed intervention, human-outcome measures, failure conditions, and safety constraints.
+
+GitHub Pages cannot safely start software on a reader's computer. The handoff therefore requires the reader to inspect and copy or download the task before opening a local harness. Direct execution would require a separately authenticated local relay or webhook whose sender credential never enters browser JavaScript.
+
 The newsletter form is intentionally a browser-only preview. It stores and sends nothing until an email provider is chosen and disclosed to readers.

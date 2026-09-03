@@ -67,11 +67,11 @@
           <ol>
             <li>
               <span>01</span>
-              <a href="https://www.unocha.org/sudan" target="_blank" rel="noreferrer">Sudan: the aid access problem, in primary sources</a>
+              <a class="article-link" href="#story-reader" data-article="sudan-access">Sudan: the aid access problem, in primary sources</a>
             </li>
             <li>
               <span>02</span>
-              <a href="https://www.who.int/emergencies/situations/conflict-in-Israel-and-oPt" target="_blank" rel="noreferrer">How health systems fail under sustained conflict</a>
+              <a class="article-link" href="#story-reader" data-article="hospital-network">How health systems fail under sustained conflict</a>
             </li>
             <li>
               <span>03</span>
@@ -79,7 +79,7 @@
             </li>
             <li>
               <span>04</span>
-              <a href="https://www.icrc.org/en/what-we-do/restoring-family-links" target="_blank" rel="noreferrer">Why reconnecting families is core aid infrastructure</a>
+              <a class="article-link" href="#story-reader" data-article="displacement-counts">Why displacement totals need a method, not just a headline</a>
             </li>
           </ol>
         </aside>
@@ -251,6 +251,42 @@
                 <p>Grounded response</p>
                 <div></div>
               </article>
+            </div>
+          </details>
+          <details class="prototype-drawer" id="prototype-drawer">
+            <summary><span>Prototype a response</span><span>Send to harness</span></summary>
+            <div class="prototype-panel">
+              <p class="prototype-note">Turn the evidence brief into a bounded build task. A public webpage cannot safely start a local coding agent, so Synergy creates a portable task you can inspect before copying it into a harness.</p>
+              <div class="ai-field-row">
+                <label for="prototype-jurisdiction">Country or jurisdiction</label>
+                <input id="prototype-jurisdiction" type="text" placeholder="Example: Kenya / county government">
+              </div>
+              <div class="ai-field-row">
+                <label for="prototype-user">Who should this help?</label>
+                <input id="prototype-user" type="text" placeholder="Example: local heat-response coordinators">
+              </div>
+              <div class="ai-field-row">
+                <label for="prototype-idea">Solution hypothesis</label>
+                <textarea id="prototype-idea" rows="3" placeholder="Describe the smallest intervention worth testing."></textarea>
+              </div>
+              <div class="ai-field-row">
+                <label for="prototype-harness">Harness</label>
+                <select id="prototype-harness">
+                  <option value="claude">Claude Code</option>
+                  <option value="codex">Codex</option>
+                  <option value="hermes">Hermes</option>
+                  <option value="generic">Generic agent</option>
+                </select>
+              </div>
+              <button class="prototype-build" id="build-prototype" type="button">Build task bundle</button>
+              <p class="prototype-status" id="prototype-status" aria-live="polite"></p>
+              <div class="prototype-output" id="prototype-output" hidden>
+                <pre></pre>
+                <div>
+                  <button id="copy-prototype" type="button">Copy for harness</button>
+                  <button id="download-prototype" type="button">Download .md</button>
+                </div>
+              </div>
             </div>
           </details>
         </article>

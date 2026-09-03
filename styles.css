@@ -639,3 +639,71 @@ img, svg { display: block; }
 .ai-answer { margin-top: 6px; padding: 13px; color: #fff; background: var(--ink); }
 .ai-answer > p { margin: 0 0 9px; color: var(--acid); font: 500 7px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
 .ai-answer > div { white-space: pre-wrap; font-size: 11px; line-height: 1.55; }
+
+.prototype-drawer { margin-top: 10px; }
+.prototype-drawer > summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font: 500 9px/1 var(--mono);
+  text-transform: uppercase;
+  list-style: none;
+}
+.prototype-drawer > summary::-webkit-details-marker { display: none; }
+.prototype-drawer > summary span:last-child { color: var(--orange-dark); }
+.prototype-panel { padding: 16px 0 5px; }
+.prototype-note {
+  margin: 0 0 17px;
+  padding: 11px;
+  color: #fff;
+  background: var(--ink);
+  font: 400 8px/1.5 var(--mono);
+}
+.ai-field-row select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  font: 400 11px/1.45 var(--sans);
+}
+.ai-field-row select:focus { border-color: var(--orange); }
+.prototype-build {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  border: 0;
+  color: var(--ink);
+  background: var(--acid);
+  cursor: pointer;
+  font: 600 9px/1 var(--mono);
+  text-transform: uppercase;
+}
+.prototype-status { min-height: 24px; margin: 9px 0 0; color: var(--ink-soft); font: 400 8px/1.4 var(--mono); }
+.prototype-output pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #fff;
+  background: var(--ink);
+  font: 400 8px/1.5 var(--mono);
+}
+.prototype-output > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.prototype-output button {
+  min-height: 37px;
+  padding: 8px;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font: 500 8px/1 var(--mono);
+  text-transform: uppercase;
+}
+.prototype-output button:first-child { color: #fff; background: var(--ink); }
