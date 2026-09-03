@@ -33,9 +33,11 @@ The current briefs are AI-assisted editorial drafts. Each reader panel exposes t
 
 ## Optional AI access
 
-There is no unlimited hosted LLM with a permanent free guarantee. The reader uses OpenRouter's `openrouter/free` route as a best-effort option, subject to OpenRouter's account, model, rate, and availability limits. Readers can enter their own OpenRouter key and choose any model route their account can access. OpenRouter also lets a user connect provider credentials to that account, which gives the site one browser API instead of separate OpenAI, Anthropic, Google, and other integrations.
+There is no unlimited hosted LLM with a permanent free guarantee. The reader uses OpenRouter's `openrouter/free` route as a best-effort option, subject to OpenRouter's account, model, rate, and availability limits. The primary connection uses [OpenRouter's documented OAuth PKCE flow](https://openrouter.ai/docs/guides/overview/auth/oauth): the browser generates an S256 verifier, OpenRouter authorizes the user, and the returned user-controlled key remains only in JavaScript memory until the tab closes. An advanced field accepts an existing OpenRouter key without persisting it.
 
-The static site sends requests directly from the reader's browser to `https://openrouter.ai/api/v1/chat/completions`. Synergy has no proxy and never receives the key. The page does not place keys in cookies, local storage, session storage, URLs, logs, or analytics. A key remains only in the password input for the current tab and the reader can clear it. Do not replace this with a developer-owned key in client JavaScript.
+The static site sends requests directly from the reader's browser to `https://openrouter.ai/api/v1/chat/completions`. Synergy has no proxy and never receives the key. It does not place keys in cookies, local storage, URLs, logs, analytics, or service-worker caches. PKCE protects the authorization-code exchange, not the resulting bearer key; the interface therefore exposes Disconnect and OpenRouter's remote revocation page. Do not replace this with a developer-owned key in client JavaScript.
+
+OpenRouter is a gateway account, not a universal subscription importer. ChatGPT/Codex entitlements, Claude/Claude Code OAuth, Gemini CLI/Code Assist quota, Copilot, and provider API billing are separate authorization surfaces. Supporting those directly requires an optional trusted local companion or backend with provider-specific approval, endpoint allowlists, refresh locking, OS credential storage, exact-origin CORS, and a per-install pairing secret. It must bind only to loopback and must never upload CLI credential files, browser cookies, or long-lived tokens to this site.
 
 Each request includes the open article's full five-part brief, causal chains, numbered source register, source relationship labels, and the reader's question. The system instruction requires bracketed source citations, separates interpretation from sourced statements, and asks the model to name missing evidence rather than invent it.
 
@@ -43,8 +45,14 @@ Each request includes the open article's full five-part brief, causal chains, nu
 
 Every editorial headline on the homepage opens an internal evidence brief. Primary sources remain one level deeper in the evidence drawer so the first click teaches the issue instead of sending the reader away.
 
-The "Prototype a response" drawer turns the open brief into a bounded Markdown task for Claude Code, Codex, Hermes, or another coding agent. The task includes the problem, causal chain, prior approaches, source register, target jurisdiction, intended user, proposed intervention, human-outcome measures, failure conditions, and safety constraints.
+The mini whiteboard beside each brief accumulates visited briefing insights and the reader's jurisdiction, intended user, and solution hypothesis in tab memory. It turns that state into a bounded Markdown task for Claude Code, Codex, Hermes, or another coding agent. The task includes the problem, causal chain, prior approaches, source register, human-outcome measures, failure conditions, and safety constraints.
 
-GitHub Pages cannot safely start software on a reader's computer. The handoff therefore requires the reader to inspect and copy or download the task before opening a local harness. Direct execution would require a separately authenticated local relay or webhook whose sender credential never enters browser JavaScript.
+GitHub Pages cannot safely start software on a reader's computer. The handoff therefore requires the reader to inspect and copy or download the task before opening a local harness. Direct execution would require a separately authenticated local relay whose sender credential never enters browser JavaScript.
+
+## Voice input
+
+Voice dictation is optional and starts only after the reader accepts an explicit microphone disclosure. It uses the browser's native `SpeechRecognition` API; some browsers route audio through a vendor service. Synergy does not create an audio stream, record audio, upload transcripts, or persist transcripts outside the field the reader is editing. Dictation stops from the visible Voice control, when its briefing closes, when the tab is hidden, or when the page is left.
+
+Future full-duplex ChatGPT, Grok, Claude, or other realtime voice belongs behind the same trusted companion/backend boundary as direct provider credentials. The browser should receive only a narrowly scoped, short-lived realtime session token when a provider officially supports one; long-lived API keys, refresh tokens, and coding-subscription tokens stay in the trusted component.
 
 The newsletter form is intentionally a browser-only preview. It stores and sends nothing until an email provider is chosen and disclosed to readers.

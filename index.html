@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Synergy connects humanitarian reporting, primary sources, and practical projects for people who want to help.">
     <meta name="theme-color" content="#f3efe4">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://openrouter.ai; object-src 'none'; base-uri 'self'; form-action 'self'">
     <title>Synergy | Intelligence for people who act</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,10 +35,13 @@
           <small>Briefs / tools / action</small>
         </a>
         <p class="header-date" id="current-date"></p>
-        <button class="search-button" type="button" aria-expanded="false" aria-controls="search-panel">
-          <span>Search</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
-        </button>
+        <div class="header-tools">
+          <button class="voice-toggle" type="button" aria-pressed="false"><span aria-hidden="true">●</span><span>Voice</span></button>
+          <button class="search-button" type="button" aria-expanded="false" aria-controls="search-panel">
+            <span>Search</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+          </button>
+        </div>
       </div>
 
       <nav class="topic-nav shell" id="site-nav" aria-label="Topics">
@@ -206,7 +211,11 @@
         <header class="reader-header">
           <a class="reader-brand" href="#top">SYNERGY / EVIDENCE BRIEF</a>
           <div class="reader-progress" id="reader-progress" aria-label="Briefing progress"></div>
-          <button class="reader-close" type="button" aria-label="Close briefing">Close</button>
+          <div class="reader-actions">
+            <button class="voice-toggle" type="button" aria-pressed="false"><span aria-hidden="true">●</span><span>Voice</span></button>
+            <button class="board-toggle" type="button" aria-expanded="false" aria-controls="prototype-board">Ideas <span id="board-count">0</span></button>
+            <button class="reader-close" type="button" aria-label="Close briefing">Close</button>
+          </div>
         </header>
 
         <article class="reader-card" aria-live="polite">
@@ -226,20 +235,27 @@
             <p class="evidence-note">These are source links and typed relationships, not a universal confidence score. Verify the source before relying on a claim.</p>
           </details>
           <details class="ai-drawer" id="ai-drawer">
-            <summary><span>Ask AI about this brief</span><span>BYOK</span></summary>
+            <summary><span>Ask AI about this brief</span><span id="ai-connection-label">Connect</span></summary>
             <div class="ai-panel">
-              <p class="ai-routing">Uses OpenRouter directly from your browser. Your key stays in this tab and never reaches Synergy. The free model route has rate and availability limits. No hosted model is infinite.</p>
-              <div class="ai-field-row">
-                <label for="ai-key">OpenRouter API key</label>
-                <div class="ai-secret">
-                  <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
-                  <button id="clear-ai-key" type="button">Clear</button>
-                </div>
-                <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">Create a key ↗</a>
+              <p class="ai-routing">Connects your OpenRouter account with its official PKCE flow. The returned user-controlled key lives only in memory until this tab closes. OpenRouter usage is billed or limited by OpenRouter; this does not import ChatGPT, Claude, or Gemini consumer subscriptions.</p>
+              <div class="ai-connect-row">
+                <button id="connect-openrouter" type="button">Connect OpenRouter</button>
+                <button id="disconnect-openrouter" type="button" hidden>Disconnect</button>
+                <a id="openrouter-key-settings" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">Manage or revoke keys ↗</a>
               </div>
+              <details class="ai-key-fallback">
+                <summary>Advanced: use an existing OpenRouter key</summary>
+                <div class="ai-field-row">
+                  <label for="ai-key">OpenRouter API key</label>
+                  <div class="ai-secret">
+                    <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
+                    <button id="clear-ai-key" type="button">Clear</button>
+                  </div>
+                </div>
+              </details>
               <div class="ai-field-row">
                 <label for="ai-model">Model route</label>
-                <input id="ai-model" type="text" value="openrouter/free" autocomplete="off" spellcheck="false">
+                <select id="ai-model"><option value="openrouter/free">OpenRouter free router</option></select>
               </div>
               <div class="ai-field-row">
                 <label for="ai-question">Question</label>
@@ -253,10 +269,20 @@
               </article>
             </div>
           </details>
-          <details class="prototype-drawer" id="prototype-drawer">
-            <summary><span>Prototype a response</span><span>Send to harness</span></summary>
+        </article>
+
+        <aside class="prototype-board" id="prototype-board" aria-labelledby="prototype-board-title">
+          <header class="prototype-board-header">
+            <div>
+              <p>Live prototype / <span id="board-progress">0 of 5 explored</span></p>
+              <h2 id="prototype-board-title">Mini whiteboard</h2>
+            </div>
+            <button class="board-close" type="button" aria-label="Close prototype board">Close</button>
+          </header>
+          <div class="prototype-board-scroll">
+            <p class="prototype-note">Your draft grows as you move through the brief. Nothing leaves this tab until you copy or download it.</p>
+            <div class="prototype-board-notes" id="prototype-board-notes" aria-live="polite"></div>
             <div class="prototype-panel">
-              <p class="prototype-note">Turn the evidence brief into a bounded build task. A public webpage cannot safely start a local coding agent, so Synergy creates a portable task you can inspect before copying it into a harness.</p>
               <div class="ai-field-row">
                 <label for="prototype-jurisdiction">Country or jurisdiction</label>
                 <input id="prototype-jurisdiction" type="text" placeholder="Example: Kenya / county government">
@@ -267,7 +293,7 @@
               </div>
               <div class="ai-field-row">
                 <label for="prototype-idea">Solution hypothesis</label>
-                <textarea id="prototype-idea" rows="3" placeholder="Describe the smallest intervention worth testing."></textarea>
+                <textarea id="prototype-idea" rows="3" placeholder="Speak or type the smallest intervention worth testing."></textarea>
               </div>
               <div class="ai-field-row">
                 <label for="prototype-harness">Harness</label>
@@ -288,8 +314,8 @@
                 </div>
               </div>
             </div>
-          </details>
-        </article>
+          </div>
+        </aside>
 
         <button class="reader-arrow reader-arrow-prev" type="button" aria-label="Previous snippet">←</button>
         <button class="reader-arrow reader-arrow-next" type="button" aria-label="Next snippet">→</button>
@@ -297,9 +323,20 @@
       </div>
     </dialog>
 
+    <dialog class="voice-consent" id="voice-consent" aria-labelledby="voice-consent-title">
+      <p class="eyebrow">Optional input</p>
+      <h2 id="voice-consent-title">Use your voice to shape the idea.</h2>
+      <p>Synergy uses your browser's native speech recognition. Depending on the browser, audio may be processed by the browser vendor. Synergy does not record, upload, or store audio or transcripts. The microphone stops when you press Stop, close this tab, or leave the page.</p>
+      <div>
+        <button id="cancel-voice" type="button">Not now</button>
+        <button id="start-voice" type="button">Start microphone</button>
+      </div>
+    </dialog>
+    <p class="voice-status" id="voice-status" aria-live="polite"></p>
     <footer class="site-footer">
       <div class="shell footer-grid">
         <div class="footer-brand"><a href="#top">SYNERGY</a><p>Intelligence for people who act.</p></div>
+
         <div><h2>Read</h2><a href="#latest">Latest notes</a><a href="#projects">Open work</a><a href="#principles">Principles</a></div>
         <div><h2>Elsewhere</h2><a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://boplog.com" target="_blank" rel="noreferrer">Boplog ↗</a></div>
         <div class="footer-note"><p>Built in public. Sources stay attached. Claims stay small enough to test.</p><span>© <span id="current-year"></span> Synergy</span></div>

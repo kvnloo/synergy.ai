@@ -61,7 +61,16 @@ const askAiButton = document.querySelector("#ask-ai");
 const clearAiKeyButton = document.querySelector("#clear-ai-key");
 const aiStatus = document.querySelector("#ai-status");
 const aiAnswer = document.querySelector("#ai-answer");
-const prototypeDrawer = document.querySelector("#prototype-drawer");
+const connectOpenRouterButton = document.querySelector("#connect-openrouter");
+const disconnectOpenRouterButton = document.querySelector("#disconnect-openrouter");
+const openRouterKeySettings = document.querySelector("#openrouter-key-settings");
+const aiConnectionLabel = document.querySelector("#ai-connection-label");
+const prototypeBoard = document.querySelector("#prototype-board");
+const prototypeBoardNotes = document.querySelector("#prototype-board-notes");
+const boardToggle = document.querySelector(".board-toggle");
+const boardClose = document.querySelector(".board-close");
+const boardCount = document.querySelector("#board-count");
+const boardProgress = document.querySelector("#board-progress");
 const prototypeJurisdiction = document.querySelector("#prototype-jurisdiction");
 const prototypeUser = document.querySelector("#prototype-user");
 const prototypeIdea = document.querySelector("#prototype-idea");
@@ -71,13 +80,36 @@ const prototypeStatus = document.querySelector("#prototype-status");
 const prototypeOutput = document.querySelector("#prototype-output");
 const copyPrototypeButton = document.querySelector("#copy-prototype");
 const downloadPrototypeButton = document.querySelector("#download-prototype");
+const voiceButtons = [...document.querySelectorAll(".voice-toggle")];
+const voiceConsent = document.querySelector("#voice-consent");
+const startVoiceButton = document.querySelector("#start-voice");
+const cancelVoiceButton = document.querySelector("#cancel-voice");
+const voiceStatus = document.querySelector("#voice-status");
+const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const READER_PROGRESS_DURATION = 18000;
+const READER_INTERACTION_PAUSE = 900;
+const OPENROUTER_PENDING_KEY = "synergy.openrouter.pending";
+
+const prototypeDrafts = new Map();
 let activeTopic = "all";
 let searchTerm = "";
 let currentArticle = null;
 let currentSlideIndex = 0;
 let touchStartX = null;
 let currentPrototypeBundle = "";
+let readerProgressFrame = null;
+let readerProgressElapsed = 0;
+let readerProgressLastTick = null;
+let readerInteractionPaused = false;
+let readerInteractionTimer = null;
+let revealObserver = null;
+let voiceRecognition = null;
+let voiceActive = false;
+let voiceConsentGiven = false;
+let voiceTarget = null;
+let openRouterKey = "";
 
 function externalAttributes(url) {
   return url.startsWith("http") ? 'target="_blank" rel="noreferrer"' : "";
@@ -163,6 +195,228 @@ function evidenceMarkup(source) {
   `;
 }
 
+function updateReaderProgress() {
+  const progress = Math.min(readerProgressElapsed / READER_PROGRESS_DURATION, 1);
+  const activeBar = readerProgress.querySelector("button.is-active span");
+  activeBar?.style.setProperty("--reader-progress", String(progress));
+}
+
+function readerProgressShouldPause() {
+  return !reader.open
+    || document.hidden
+    || prefersReducedMotion.matches
+    || readerInteractionPaused
+    || evidenceDrawer.open
+    || aiDrawer.open
+    || prototypeBoard.classList.contains("is-open")
+    || prototypeBoard.contains(document.activeElement);
+}
+
+function stopReaderProgressFrame() {
+  if (readerProgressFrame !== null) cancelAnimationFrame(readerProgressFrame);
+  readerProgressFrame = null;
+  readerProgressLastTick = null;
+}
+
+function advanceReaderProgress(timestamp) {
+  if (readerProgressShouldPause()) {
+    stopReaderProgressFrame();
+    return;
+  }
+  if (readerProgressLastTick !== null) {
+    readerProgressElapsed = Math.min(
+      readerProgressElapsed + timestamp - readerProgressLastTick,
+      READER_PROGRESS_DURATION
+    );
+  }
+  readerProgressLastTick = timestamp;
+  updateReaderProgress();
+  if (readerProgressElapsed < READER_PROGRESS_DURATION) {
+    readerProgressFrame = requestAnimationFrame(advanceReaderProgress);
+  } else {
+    stopReaderProgressFrame();
+  }
+}
+
+function syncReaderProgress() {
+  if (readerProgressShouldPause()) {
+    stopReaderProgressFrame();
+    return;
+  }
+  if (readerProgressElapsed < READER_PROGRESS_DURATION && readerProgressFrame === null) {
+    readerProgressFrame = requestAnimationFrame(advanceReaderProgress);
+  }
+}
+
+function resetReaderProgress() {
+  stopReaderProgressFrame();
+  readerProgressElapsed = 0;
+  updateReaderProgress();
+  syncReaderProgress();
+}
+
+function beginReaderInteraction() {
+  window.clearTimeout(readerInteractionTimer);
+  readerInteractionPaused = true;
+  syncReaderProgress();
+}
+
+function endReaderInteraction(delay = READER_INTERACTION_PAUSE) {
+  if (!readerInteractionPaused) return;
+  window.clearTimeout(readerInteractionTimer);
+  readerInteractionTimer = window.setTimeout(() => {
+    readerInteractionPaused = false;
+    syncReaderProgress();
+  }, delay);
+}
+
+function pauseReaderProgressBriefly() {
+  beginReaderInteraction();
+  endReaderInteraction();
+}
+
+function animateReaderSlide() {
+  if (prefersReducedMotion.matches) return;
+  readerCard.getAnimations().forEach((animation) => animation.cancel());
+  readerCard.animate(
+    [{ opacity: 0.4, transform: "translateY(8px)" }, { opacity: 1, transform: "translateY(0)" }],
+    { duration: 260, easing: "cubic-bezier(.25, 1, .5, 1)" }
+  );
+  causalChain.querySelectorAll("li").forEach((item, index) => {
+    item.animate(
+      [{ opacity: 0, transform: "translateX(-8px)" }, { opacity: 1, transform: "translateX(0)" }],
+      { duration: 260, delay: index * 45, easing: "cubic-bezier(.25, 1, .5, 1)", fill: "backwards" }
+    );
+  });
+}
+
+function setupSectionReveals() {
+  revealObserver?.disconnect();
+  revealObserver = null;
+  document.documentElement.classList.remove("has-reveal-motion");
+  if (prefersReducedMotion.matches || !("IntersectionObserver" in window)) return;
+
+  const revealGroups = [
+    ".hero > *",
+    ".briefing-inner > *",
+    ".stories-heading, .story-card",
+    ".projects-intro > *, .project-card",
+    ".principles-title, .principle-list article",
+    ".newsletter-inner > *"
+  ];
+  const revealItems = [];
+  revealGroups.forEach((selector) => {
+    document.querySelectorAll(selector).forEach((item, index) => {
+      item.classList.add("reveal-item");
+      item.classList.remove("is-revealed");
+      item.style.setProperty("--reveal-order", String(index));
+      revealItems.push(item);
+    });
+  });
+
+  document.documentElement.classList.add("has-reveal-motion");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("is-revealed");
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -48px" });
+  revealObserver = observer;
+  revealItems.forEach((item) => observer.observe(item));
+}
+
+function getPrototypeDraft(article = currentArticle) {
+  if (!article) return null;
+  if (!prototypeDrafts.has(article.id)) {
+    prototypeDrafts.set(article.id, {
+      visited: new Set(),
+      jurisdiction: "",
+      intendedUser: "",
+      idea: "",
+      harness: "claude",
+      bundle: ""
+    });
+  }
+  return prototypeDrafts.get(article.id);
+}
+
+function renderPrototypeBoard() {
+  const draft = getPrototypeDraft();
+  if (!draft || !currentArticle) return;
+  const visited = [...draft.visited].sort((left, right) => left - right);
+  boardCount.textContent = String(visited.length);
+  boardProgress.textContent = `${visited.length} of ${currentArticle.slides.length} briefing insights collected`;
+  prototypeBoardNotes.replaceChildren();
+
+  visited.forEach((index) => {
+    const slide = currentArticle.slides[index];
+    const note = document.createElement("article");
+    note.className = "prototype-note";
+    const label = document.createElement("p");
+    label.textContent = `${String(index + 1).padStart(2, "0")} / ${slide.kind}`;
+    const title = document.createElement("h4");
+    title.textContent = slide.title;
+    note.append(label, title);
+    prototypeBoardNotes.append(note);
+  });
+
+  if (draft.idea.trim()) {
+    const ideaNote = document.createElement("article");
+    ideaNote.className = "prototype-note prototype-note-idea";
+    const label = document.createElement("p");
+    label.textContent = "Your solution hypothesis";
+    const body = document.createElement("span");
+    body.textContent = draft.idea.trim();
+    ideaNote.append(label, body);
+    prototypeBoardNotes.append(ideaNote);
+  }
+}
+
+function savePrototypeDraft() {
+  const draft = getPrototypeDraft();
+  if (!draft) return;
+  draft.jurisdiction = prototypeJurisdiction.value;
+  draft.intendedUser = prototypeUser.value;
+  draft.idea = prototypeIdea.value;
+  draft.harness = prototypeHarness.value;
+  draft.bundle = currentPrototypeBundle;
+  renderPrototypeBoard();
+}
+
+function loadPrototypeDraft() {
+  const draft = getPrototypeDraft();
+  if (!draft) return;
+  prototypeJurisdiction.value = draft.jurisdiction;
+  prototypeUser.value = draft.intendedUser;
+  prototypeIdea.value = draft.idea;
+  prototypeHarness.value = draft.harness;
+  currentPrototypeBundle = draft.bundle;
+  prototypeOutput.hidden = !draft.bundle;
+  prototypeOutput.querySelector("pre").textContent = draft.bundle;
+  prototypeStatus.textContent = draft.bundle ? "Your last task bundle is restored in this tab." : "";
+  renderPrototypeBoard();
+}
+
+function recordCurrentSlide() {
+  const draft = getPrototypeDraft();
+  if (!draft) return;
+  draft.visited.add(currentSlideIndex);
+  renderPrototypeBoard();
+}
+
+function openPrototypeBoard() {
+  prototypeBoard.classList.add("is-open");
+  boardToggle.setAttribute("aria-expanded", "true");
+  syncReaderProgress();
+}
+
+function closePrototypeBoard() {
+  prototypeBoard.classList.remove("is-open");
+  boardToggle.setAttribute("aria-expanded", "false");
+  syncReaderProgress();
+}
+
 function renderReaderSlide() {
   const slide = currentArticle.slides[currentSlideIndex];
   const slideNumber = currentSlideIndex + 1;
@@ -175,17 +429,23 @@ function renderReaderSlide() {
     <li><span>${String(index + 1).padStart(2, "0")}</span><p>${step}</p></li>
   `).join("");
   evidenceList.innerHTML = slide.sources.map(evidenceMarkup).join("");
+  readerCard.scrollTop = 0;
   evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"}`;
   evidenceDrawer.open = false;
   readerProgress.innerHTML = currentArticle.slides.map((item, index) => `
-    <button type="button" class="${index === currentSlideIndex ? "is-active" : ""}" data-slide="${index}" aria-label="Open snippet ${index + 1}: ${item.kind}"><span></span></button>
+    <button
+      type="button"
+      class="${index < currentSlideIndex ? "is-complete" : ""}${index === currentSlideIndex ? "is-active" : ""}"
+      data-slide="${index}"
+      aria-label="Open snippet ${index + 1}: ${item.kind}"
+      ${index === currentSlideIndex ? 'aria-current="step"' : ""}
+    ><span></span></button>
   `).join("");
   previousButton.disabled = currentSlideIndex === 0;
   nextButton.disabled = currentSlideIndex === currentArticle.slides.length - 1;
-  readerCard.animate(
-    [{ opacity: 0.35, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }],
-    { duration: 220, easing: "ease-out" }
-  );
+  updateReaderProgress();
+  animateReaderSlide();
+  recordCurrentSlide();
 }
 
 function openArticle(articleId) {
@@ -197,16 +457,13 @@ function openArticle(articleId) {
   aiQuestionInput.value = "";
   aiStatus.textContent = "";
   aiAnswer.hidden = true;
-  prototypeDrawer.open = false;
-  prototypeJurisdiction.value = "";
-  prototypeUser.value = "";
-  prototypeIdea.value = "";
-  prototypeStatus.textContent = "";
-  prototypeOutput.hidden = true;
-  currentPrototypeBundle = "";
+  prototypeBoard.classList.remove("is-open");
+  boardToggle.setAttribute("aria-expanded", "false");
+  loadPrototypeDraft();
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
+  resetReaderProgress();
 }
 
 function closeReader() {
@@ -217,6 +474,7 @@ function setSlide(index) {
   if (!currentArticle || index < 0 || index >= currentArticle.slides.length || index === currentSlideIndex) return;
   currentSlideIndex = index;
   renderReaderSlide();
+  resetReaderProgress();
 }
 
 function previousSlide() {
@@ -252,14 +510,174 @@ function buildArticleContext(article) {
   return `ARTICLE: ${article.title}\n\n${sections}\n\nSOURCE REGISTER:\n${sources}`;
 }
 
+function buildVisitedInsightContext() {
+  const draft = getPrototypeDraft();
+  if (!draft) return "No briefing slides collected.";
+  return [...draft.visited]
+    .sort((left, right) => left - right)
+    .map((index) => {
+      const slide = currentArticle.slides[index];
+      return `- ${slide.kind}: ${slide.title}`;
+    })
+    .join("\n");
+}
+
+function base64Url(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function randomBase64Url(size = 48) {
+  const bytes = new Uint8Array(size);
+  crypto.getRandomValues(bytes);
+  return base64Url(bytes);
+}
+
+async function sha256Bytes(value) {
+  const encoded = new TextEncoder().encode(value);
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", encoded));
+}
+
+async function beginOpenRouterConnection() {
+  try {
+    const verifier = randomBase64Url();
+    const challenge = base64Url(await sha256Bytes(verifier));
+    const nonce = randomBase64Url(18);
+    const callbackUrl = new URL(window.location.href);
+    callbackUrl.hash = "";
+    callbackUrl.searchParams.delete("code");
+    callbackUrl.searchParams.set("or_state", nonce);
+    sessionStorage.setItem(OPENROUTER_PENDING_KEY, JSON.stringify({
+      verifier,
+      nonce,
+      startedAt: Date.now()
+    }));
+
+    const authorizationUrl = new URL("https://openrouter.ai/auth");
+    authorizationUrl.searchParams.set("callback_url", callbackUrl.toString());
+    authorizationUrl.searchParams.set("code_challenge", challenge);
+    authorizationUrl.searchParams.set("code_challenge_method", "S256");
+    window.location.assign(authorizationUrl);
+  } catch {
+    aiStatus.textContent = "OpenRouter connection could not start. This browser must allow Web Crypto and session storage.";
+  }
+}
+
+async function updateOpenRouterKeyLink(key) {
+  const digest = await sha256Bytes(key);
+  const hash = [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  openRouterKeySettings.href = `https://openrouter.ai/keys/${hash}`;
+}
+
+function setOpenRouterConnected(key) {
+  openRouterKey = key;
+  aiConnectionLabel.textContent = "Connected";
+  connectOpenRouterButton.hidden = true;
+  disconnectOpenRouterButton.hidden = false;
+  aiKeyInput.value = "";
+  updateOpenRouterKeyLink(key);
+}
+
+function disconnectOpenRouter() {
+  openRouterKey = "";
+  aiConnectionLabel.textContent = "Connect";
+  connectOpenRouterButton.hidden = false;
+  disconnectOpenRouterButton.hidden = true;
+  openRouterKeySettings.href = "https://openrouter.ai/settings/keys";
+  aiStatus.textContent = "Disconnected in this tab. Use OpenRouter key settings to revoke the remote key.";
+}
+
+async function loadOpenRouterModels(apiKey = "") {
+  try {
+    const headers = apiKey ? { "Authorization": `Bearer ${apiKey}` } : {};
+    const response = await fetch("https://openrouter.ai/api/v1/models", { headers });
+    if (!response.ok) throw new Error(`Model catalog returned ${response.status}.`);
+    const payload = await response.json();
+    const currentModel = aiModelInput.value || "openrouter/free";
+    const models = (payload.data || [])
+      .filter((model) => {
+        const inputs = model.architecture?.input_modalities || [];
+        return inputs.length === 0 || inputs.includes("text");
+      })
+      .sort((left, right) => (left.name || left.id).localeCompare(right.name || right.id));
+
+    aiModelInput.replaceChildren(new Option("OpenRouter free router", "openrouter/free"));
+    models.forEach((model) => {
+      if (model.id === "openrouter/free") return;
+      aiModelInput.add(new Option(model.name || model.id, model.id));
+    });
+    aiModelInput.value = [...aiModelInput.options].some((option) => option.value === currentModel)
+      ? currentModel
+      : "openrouter/free";
+  } catch (error) {
+    if (apiKey) aiStatus.textContent = `Connected, but model discovery failed: ${error.message}`;
+  }
+}
+
+async function completeOpenRouterConnection() {
+  const callbackUrl = new URL(window.location.href);
+  const code = callbackUrl.searchParams.get("code");
+  if (!code) {
+    loadOpenRouterModels();
+    return;
+  }
+
+  const returnedNonce = callbackUrl.searchParams.get("or_state");
+  callbackUrl.searchParams.delete("code");
+  callbackUrl.searchParams.delete("or_state");
+  history.replaceState({}, "", callbackUrl);
+
+  let pending = null;
+  try {
+    pending = JSON.parse(sessionStorage.getItem(OPENROUTER_PENDING_KEY));
+  } catch {
+    pending = null;
+  }
+  sessionStorage.removeItem(OPENROUTER_PENDING_KEY);
+  if (
+    !pending?.verifier
+    || !pending.nonce
+    || pending.nonce !== returnedNonce
+    || Date.now() - pending.startedAt > 10 * 60 * 1000
+  ) {
+    aiStatus.textContent = "Ignored an unsolicited or expired OpenRouter callback. Start Connect OpenRouter again.";
+    return;
+  }
+
+  aiStatus.textContent = "Completing OpenRouter connection…";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/auth/keys", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        code_verifier: pending.verifier,
+        code_challenge_method: "S256"
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.key) {
+      throw new Error(payload.error?.message || `OpenRouter returned ${response.status}.`);
+    }
+    setOpenRouterConnected(payload.key);
+    aiStatus.textContent = "OpenRouter connected for this tab. The key was not persisted.";
+    await loadOpenRouterModels(payload.key);
+  } catch (error) {
+    aiStatus.textContent = `OpenRouter connection failed: ${error.message}`;
+  }
+}
+
 async function askArticleQuestion() {
-  const apiKey = aiKeyInput.value.trim();
+  const apiKey = openRouterKey || aiKeyInput.value.trim();
   const question = aiQuestionInput.value.trim();
   const model = aiModelInput.value.trim() || "openrouter/free";
 
   if (!apiKey) {
-    aiStatus.textContent = "Enter your OpenRouter key. It is used only for this direct request.";
-    aiKeyInput.focus();
+    aiStatus.textContent = "Connect OpenRouter or enter an existing key.";
+    connectOpenRouterButton.focus();
     return;
   }
   if (!question) {
@@ -341,6 +759,10 @@ Issue brief: ${currentArticle.title}
 Jurisdiction: ${jurisdiction}
 Intended user: ${intendedUser}
 
+## Briefing insights collected while reading
+
+${buildVisitedInsightContext()}
+
 ## Solution hypothesis
 
 ${idea}
@@ -378,6 +800,7 @@ ${buildArticleContext(currentArticle)}
   prototypeOutput.querySelector("pre").textContent = currentPrototypeBundle;
   prototypeOutput.hidden = false;
   prototypeStatus.textContent = `Task prepared for ${harnessNames[harness]}. Inspect it before handing it to an agent.`;
+  savePrototypeDraft();
 }
 
 async function copyText(text) {
@@ -416,6 +839,101 @@ function downloadPrototypeBundle() {
   link.click();
   URL.revokeObjectURL(url);
   prototypeStatus.textContent = "Task bundle downloaded. Review it before starting a harness.";
+}
+
+function setVoiceUi(active) {
+  voiceActive = active;
+  voiceButtons.forEach((button) => {
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    const label = button.querySelector("span:last-child");
+    if (label) label.textContent = active ? "Stop" : "Voice";
+  });
+}
+
+function getVoiceDestination() {
+  const focused = document.activeElement;
+  if (
+    focused instanceof HTMLTextAreaElement
+    || (focused instanceof HTMLInputElement && ["search", "text"].includes(focused.type))
+  ) {
+    return focused;
+  }
+  if (reader.open) {
+    openPrototypeBoard();
+    prototypeIdea.focus();
+    return prototypeIdea;
+  }
+  searchPanel.hidden = false;
+  searchButton.setAttribute("aria-expanded", "true");
+  searchInput.focus();
+  return searchInput;
+}
+
+function appendVoiceTranscript(target, transcript) {
+  const separator = target.value && !target.value.endsWith(" ") ? " " : "";
+  target.value = `${target.value}${separator}${transcript.trim()} `;
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function stopVoiceDictation(message = "Microphone stopped.") {
+  if (voiceRecognition) {
+    voiceRecognition.stop();
+    voiceRecognition = null;
+  }
+  setVoiceUi(false);
+  voiceStatus.textContent = message;
+}
+
+function startVoiceDictation() {
+  if (!SpeechRecognitionApi) {
+    voiceStatus.textContent = "This browser does not support native speech recognition.";
+    return;
+  }
+
+  voiceTarget = getVoiceDestination();
+  const recognition = new SpeechRecognitionApi();
+  voiceRecognition = recognition;
+  recognition.lang = navigator.language || "en-US";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.addEventListener("start", () => {
+    setVoiceUi(true);
+    voiceStatus.textContent = "Listening. Press Stop when you are finished.";
+  });
+  recognition.addEventListener("result", (event) => {
+    let interim = "";
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      if (result.isFinal) appendVoiceTranscript(voiceTarget, result[0].transcript);
+      else interim += result[0].transcript;
+    }
+    voiceStatus.textContent = interim
+      ? `Listening: ${interim}`
+      : "Listening. Press Stop when you are finished.";
+  });
+  recognition.addEventListener("error", (event) => {
+    voiceStatus.textContent = event.error === "not-allowed"
+      ? "Microphone access was not granted."
+      : `Voice recognition stopped: ${event.error}.`;
+  });
+  recognition.addEventListener("end", () => {
+    if (voiceRecognition === recognition) voiceRecognition = null;
+    setVoiceUi(false);
+    if (!voiceStatus.textContent.includes("not granted") && !voiceStatus.textContent.includes("stopped:")) {
+      voiceStatus.textContent = "Microphone stopped.";
+    }
+  });
+
+  try {
+    voiceStatus.textContent = "Waiting for browser microphone access…";
+    recognition.start();
+  } catch {
+    voiceRecognition = null;
+    setVoiceUi(false);
+    voiceStatus.textContent = "Voice recognition could not start.";
+  }
 }
 
 topicLinks.forEach((link) => {
@@ -469,13 +987,68 @@ clearAiKeyButton.addEventListener("click", () => {
 buildPrototypeButton.addEventListener("click", buildPrototypeBundle);
 copyPrototypeButton.addEventListener("click", copyPrototypeBundle);
 downloadPrototypeButton.addEventListener("click", downloadPrototypeBundle);
+boardToggle.addEventListener("click", () => {
+  if (prototypeBoard.classList.contains("is-open")) closePrototypeBoard();
+  else openPrototypeBoard();
+});
+connectOpenRouterButton.addEventListener("click", beginOpenRouterConnection);
+disconnectOpenRouterButton.addEventListener("click", disconnectOpenRouter);
+boardClose.addEventListener("click", closePrototypeBoard);
+[prototypeJurisdiction, prototypeUser, prototypeIdea, prototypeHarness].forEach((field) => {
+  field.addEventListener("input", savePrototypeDraft);
+  field.addEventListener("change", savePrototypeDraft);
+});
+prototypeBoard.addEventListener("focusin", syncReaderProgress);
+prototypeBoard.addEventListener("focusout", () => requestAnimationFrame(syncReaderProgress));
+
+[evidenceDrawer, aiDrawer].forEach((drawer) => {
+  drawer.addEventListener("toggle", syncReaderProgress);
+});
+
+voiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (voiceActive) {
+      stopVoiceDictation();
+      return;
+    }
+    if (!SpeechRecognitionApi) {
+      voiceStatus.textContent = "This browser does not support native speech recognition.";
+      return;
+    }
+    if (voiceConsentGiven) {
+      startVoiceDictation();
+      return;
+    }
+    if (!voiceConsent.open) voiceConsent.showModal();
+  });
+});
+startVoiceButton.addEventListener("click", () => {
+  voiceConsentGiven = true;
+  voiceConsent.close();
+  startVoiceDictation();
+});
+cancelVoiceButton.addEventListener("click", () => voiceConsent.close());
+
+document.addEventListener("visibilitychange", () => {
+  syncReaderProgress();
+  if (document.hidden && voiceActive) stopVoiceDictation("Microphone stopped when the tab was hidden.");
+});
+prefersReducedMotion.addEventListener("change", () => {
+  setupSectionReveals();
+  updateReaderProgress();
+  syncReaderProgress();
+});
 
 readerStage.addEventListener("click", (event) => {
-  if (event.target.closest("a, button, summary, details")) return;
+  if (event.target.closest("a, button, summary, details, .prototype-board")) return;
   if (event.clientX >= window.innerWidth / 2) nextSlide();
   else previousSlide();
 });
 
+readerStage.addEventListener("pointerdown", beginReaderInteraction);
+document.addEventListener("pointerup", () => endReaderInteraction());
+document.addEventListener("pointercancel", () => endReaderInteraction());
+readerStage.addEventListener("wheel", pauseReaderProgressBriefly, { passive: true });
 readerStage.addEventListener("touchstart", (event) => {
   touchStartX = event.changedTouches[0].clientX;
 }, { passive: true });
@@ -491,13 +1064,18 @@ readerStage.addEventListener("touchend", (event) => {
 }, { passive: true });
 
 reader.addEventListener("close", () => {
+  stopReaderProgressFrame();
+  window.clearTimeout(readerInteractionTimer);
+  readerInteractionPaused = false;
   document.documentElement.classList.remove("reader-open");
   currentArticle = null;
+  closePrototypeBoard();
+  if (voiceTarget && reader.contains(voiceTarget)) stopVoiceDictation();
 });
-
 document.addEventListener("keydown", (event) => {
-  if (event.target.matches("input, textarea, select, [contenteditable='true']")) return;
+  if (event.target.matches("input, textarea, select, button, a, summary, [contenteditable='true']")) return;
   if (reader.open) {
+    pauseReaderProgressBriefly();
     if (event.key === "ArrowRight" || event.key === " ") {
       event.preventDefault();
       nextSlide();
@@ -514,6 +1092,7 @@ document.addEventListener("keydown", (event) => {
     searchButton.focus();
   }
 });
+window.addEventListener("pagehide", () => stopVoiceDictation());
 
 document.querySelector("#newsletter-form").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -528,7 +1107,9 @@ document.querySelector("#current-date").textContent = new Intl.DateTimeFormat("e
   year: "numeric"
 }).format(today);
 document.querySelector("#current-year").textContent = today.getFullYear();
+completeOpenRouterConnection();
 
 renderDispatches();
 renderStories();
 applyFilters();
+setupSectionReveals();
