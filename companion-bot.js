@@ -309,17 +309,41 @@ export function setupSynCompanion(options = {}) {
   const ctx = { reading: false, board: false, voice: false, section: "home" };
 
   function petSize() {
-    return { w: root.offsetWidth || 96, h: root.offsetHeight || 96 };
+    // Buddy footprint only — bubble is absolutely positioned and must not
+    // change the seat box (that was the click "jump").
+    const w = buddy?.offsetWidth || root.offsetWidth || 84;
+    const h = buddy?.offsetHeight || root.offsetHeight || 84;
+    return { w, h };
+  }
+
+  function pad() {
+    // Keep soft shadow + Syn label fully inside the viewport.
+    return {
+      x: 10,
+      y: 12,
+      r: 16,
+      b: 22
+    };
   }
 
   function clampSeat(x, y) {
     const { w, h } = petSize();
-    const maxX = Math.max(0, window.innerWidth - w);
-    const maxY = Math.max(0, window.innerHeight - h);
+    const p = pad();
+    const maxX = Math.max(p.x, window.innerWidth - w - p.r);
+    const maxY = Math.max(p.y, window.innerHeight - h - p.b);
     return {
-      x: clamp(x, 0, maxX, maxX),
-      y: clamp(y, 0, maxY, maxY)
+      x: clamp(x, p.x, maxX, maxX),
+      y: clamp(y, p.y, maxY, maxY)
     };
+  }
+
+  function updateEdge(x) {
+    const { w } = petSize();
+    const mid = x + w * 0.5;
+    let edge = "center";
+    if (mid > window.innerWidth - 140) edge = "right";
+    else if (mid < 140) edge = "left";
+    root.dataset.edge = edge;
   }
 
   function applySeat(x, y, { save = false } = {}) {
@@ -330,6 +354,7 @@ export function setupSynCompanion(options = {}) {
     root.style.top = `${seatY}px`;
     root.style.right = "auto";
     root.style.bottom = "auto";
+    updateEdge(seatX);
     if (save) {
       try {
         localStorage.setItem(POS_KEY, JSON.stringify({ x: seatX, y: seatY }));
@@ -341,9 +366,10 @@ export function setupSynCompanion(options = {}) {
 
   function defaultSeat() {
     const { w, h } = petSize();
+    const p = pad();
     return {
-      x: Math.max(14, window.innerWidth - w - 18),
-      y: Math.max(14, window.innerHeight - h - 18)
+      x: Math.max(p.x, window.innerWidth - w - p.r),
+      y: Math.max(p.y, window.innerHeight - h - p.b)
     };
   }
 
@@ -426,7 +452,8 @@ export function setupSynCompanion(options = {}) {
   function poke() {
     awake = true;
     root.dataset.awake = "1";
-    hopUntil = performance.now() + 420;
+    // In-place squash/bounce only — no seat rewrite, no layout hop.
+    hopUntil = performance.now() + 320;
     setExpression(pick(POKE_EXPRESSIONS), { force: true });
     sayLine(pick(MOOD_LINES.poke), { hold: 2600 });
   }
@@ -535,26 +562,27 @@ export function setupSynCompanion(options = {}) {
     spring(leanX, targetLeanX, 16, 0.84, dt);
     spring(leanY, targetLeanY, 16, 0.84, dt);
 
-    let targetBob = life.driftY * 120;
+    let targetBob = life.driftY * 40;
     let targetScale = life.breath;
     if (!reduced) {
       if (dragging) {
-        targetScale = 1.08;
-        targetBob = -4;
-      } else if (now < hopUntil || (now < reactionUntil && reactionKind === "bounce")) {
-        targetBob = -11;
-        targetScale = 1.07;
-      } else if (now < reactionUntil && reactionKind === "squash") {
-        targetScale = 0.94;
-        targetBob = 3;
-      } else if (now < reactionUntil && reactionKind === "tilt") {
+        targetScale = 1.06;
         targetBob = -2;
+      } else if (now < hopUntil || (now < reactionUntil && reactionKind === "bounce")) {
+        // Subtle hop inside the SVG — keep visual center stable.
+        targetBob = -5;
+        targetScale = 1.045;
+      } else if (now < reactionUntil && reactionKind === "squash") {
+        targetScale = 0.96;
+        targetBob = 2;
+      } else if (now < reactionUntil && reactionKind === "tilt") {
+        targetBob = -1;
       } else if (root.classList.contains("is-talking") || now < speakingUntil) {
-        targetBob = Math.sin(now / 90) * 2.4;
-        targetScale = 1.03 + Math.sin(now / 70) * 0.02;
+        targetBob = Math.sin(now / 90) * 1.4;
+        targetScale = 1.02 + Math.sin(now / 70) * 0.012;
       } else if (mood === "voice") {
-        targetBob = Math.sin(now / 140) * 3.5;
-        targetScale = 1.04;
+        targetBob = Math.sin(now / 140) * 2.2;
+        targetScale = 1.03;
       }
     } else {
       targetBob = 0;
@@ -623,7 +651,8 @@ export function setupSynCompanion(options = {}) {
 
   dragSurface.addEventListener("pointerdown", (event) => {
     if (event.button != null && event.button !== 0) return;
-    const rect = root.getBoundingClientRect();
+    // Offset from the buddy box, not the root (bubble must not affect drag origin).
+    const rect = (buddy || root).getBoundingClientRect();
     dragging = true;
     didDrag = false;
     dragPointerId = event.pointerId;
