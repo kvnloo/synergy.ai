@@ -438,5 +438,69 @@ export const articles = [
       }
     ]
   }
+  ,
+  {
+    id: "psychological-first-aid",
+    topic: "health",
+    label: "Health",
+    readTime: "7 min briefing",
+    title: "Psychological first aid is a human skill, not a therapy brand.",
+    summary: "In the first hours and days after violence, displacement, or disaster, most people need safety, dignity, and clear information more than a diagnosis. Psychological first aid is listen, protect, and link — without forcing people to retell trauma for your paperwork.",
+    visual: "health",
+    visualWord: "LISTEN / LINK",
+    reviewed: "2026-09-09",
+    slides: [
+      {
+        kind: "The brief",
+        title: "First contact should reduce harm, not perform expertise.",
+        body: "Psychological first aid (PFA) is a humane response for people in acute distress after crisis. It is not psychotherapy, not interrogation, and not a promise that you can fix grief. The core is practical: help someone feel safer, heard, and connected to information and services they choose.",
+        chain: ["Crisis hits", "Acute distress rises", "First contact happens", "Safety and dignity hold", "Person chooses next links"],
+        sources: [
+          { relation: "supports", kind: "guidance", title: "WHO: Psychological first aid — Guide for field workers", url: "https://www.who.int/publications/i/item/9789241548205", note: "Field guide for PFA principles and actions." },
+          { relation: "supports", kind: "guidance", title: "WHO: Psychological first aid — Facilitator's manual", url: "https://www.who.int/publications/i/item/9789241548618", note: "Training framing for non-specialists." }
+        ]
+      },
+      {
+        kind: "Why it exists",
+        title: "Chaos creates secondary harm when helpers rush, pry, or pathologize.",
+        body: "After attack, flood, or flight, people face threat, loss, and uncertainty. Well-meant helpers may demand the full story, separate families for process, or label normal reactions as disorder. Rumors replace facts. The gap is trained presence: enough structure to protect, enough restraint to avoid making the event worse.",
+        chain: ["Threat and loss", "Helpers arrive unevenly", "Curiosity and process pressure", "Dignity breaks", "Distress compounds"],
+        sources: [
+          { relation: "context", kind: "guidance", title: "IASC Guidelines on Mental Health and Psychosocial Support in Emergency Settings", url: "https://interagencystandingcommittee.org/iasc-task-force-mental-health-and-psychosocial-support-emergency-settings/iasc-guidelines-mental-health-and-psychosocial-support-emergency-settings-2007", note: "Layered MHPSS supports; PFA as a community-level response." },
+          { relation: "supports", kind: "guidance", title: "WHO mhGAP Humanitarian Intervention Guide", url: "https://www.who.int/publications/i/item/9789241548014", note: "Clinical and non-clinical roles in humanitarian mental health." }
+        ]
+      },
+      {
+        kind: "What has been tried",
+        title: "Look, listen, link — with consent and without forced debriefing.",
+        body: "Established PFA practice: look (safety, urgent needs, who is distressed), listen (if they want to talk, stay close, do not push details), link (information, loved ones, services, basic needs). Single-session forced emotional debriefing is not recommended. Train teachers, volunteers, and responders in boundaries as much as in scripts.",
+        chain: ["Look for safety needs", "Listen without forcing", "Link to chosen supports", "Protect privacy", "Know your limits"],
+        sources: [
+          { relation: "supports", kind: "guidance", title: "WHO PFA guide — Look, Listen, Link", url: "https://www.who.int/publications/i/item/9789241548205", note: "Action principles used worldwide in training." },
+          { relation: "limits", kind: "guidance", title: "WHO: psychological debriefing not recommended as mandatory single-session", url: "https://www.who.int/publications/i/item/9789241548205", note: "PFA distinguishes supportive contact from forced retelling." }
+        ]
+      },
+      {
+        kind: "Across borders",
+        title: "Transfer the functions: safety, voice, accurate news, trusted local links.",
+        body: "A Western counseling posture can fail where faith leaders, elders, or mutual-aid groups are the trusted first contact. Gender, language, and stigma change who can approach whom. Start from functions — physical safety, confidential listening, trustworthy information, family tracing, basic needs — then map who already holds trust. Do not import a clinic brand; import restraint and consent.",
+        chain: ["Name the functions", "Map trusted local actors", "Fit language and gender norms", "Share accurate information", "Refer only with consent"],
+        sources: [
+          { relation: "method", kind: "guidance", title: "IASC MHPSS guidelines — community supports", url: "https://interagencystandingcommittee.org/iasc-task-force-mental-health-and-psychosocial-support-emergency-settings/iasc-guidelines-mental-health-and-psychosocial-support-emergency-settings-2007", note: "Multi-layered supports grounded in community." },
+          { relation: "context", kind: "guidance", title: "Sphere Handbook: protection and mental health references", url: "https://spherestandards.org/handbook-2018/", note: "Dignity and protection principles in humanitarian response." }
+        ]
+      },
+      {
+        kind: "Better incentives",
+        title: "Reward safe presence and honest limits, not story extraction.",
+        body: "If agencies count forms completed or tears witnessed, staff will pry. Better measures: people who got water, family contact, clear next-step information, and the option to decline. Train-do-don't for helpers: do stay calm and useful; do keep confidences; do tell the truth about what you can offer. Don't force talk; don't share photos; don't promise what you cannot deliver; don't replace specialized care when risk is high — link to it.",
+        chain: ["Stay calm and practical", "Protect confidentiality", "Offer truthful choices", "Never force the story", "Link up when risk is high"],
+        sources: [
+          { relation: "principle", kind: "guidance", title: "WHO PFA — helper principles and ethics", url: "https://www.who.int/publications/i/item/9789241548205", note: "Respect, honesty, and boundaries for field helpers." },
+          { relation: "supports", kind: "guidance", title: "IASC: do no harm in MHPSS", url: "https://interagencystandingcommittee.org/iasc-task-force-mental-health-and-psychosocial-support-emergency-settings/iasc-guidelines-mental-health-and-psychosocial-support-emergency-settings-2007", note: "Avoid interventions that increase harm or stigma." }
+        ]
+      }
+    ]
+  }
 
 ];

@@ -2231,3 +2231,66 @@ select:focus {
   border: 1px dashed var(--line);
   background: rgba(255,255,255,.35);
 }
+
+.done-today {
+  padding: 28px 0 8px;
+}
+.done-today-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font: 500 13px/1.4 var(--serif);
+}
+.done-today-resume {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 600 10px/1 var(--mono);
+  text-transform: uppercase;
+}
+body.is-done-today #story-grid,
+body.is-done-today .briefing-band,
+body.is-done-today .hero .lead-story {
+  opacity: 0.42;
+  pointer-events: none;
+}
+body.is-done-today #done-today {
+  display: block;
+}
+.reader-done {
+  padding: 6px 10px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 600 9px/1 var(--mono);
+  text-transform: uppercase;
+}
+.reader-done[hidden] { display: none; }
+.read-aloud-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.read-aloud {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 600 9px/1 var(--mono);
+  text-transform: uppercase;
+}
+.read-aloud[aria-pressed="true"] {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+#read-aloud-rate {
+  font: 500 10px/1 var(--mono);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  padding: 4px;
+}

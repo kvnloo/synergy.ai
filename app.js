@@ -93,6 +93,14 @@ const chainOrder = document.querySelector("#chain-order");
 const chainCheck = document.querySelector("#chain-check");
 const chainReset = document.querySelector("#chain-reset");
 const chainFeedback = document.querySelector("#chain-feedback");
+const doneToday = document.querySelector("#done-today");
+const doneTodayResume = document.querySelector("#done-today-resume");
+const readerDone = document.querySelector("#reader-done");
+const readAloudBtn = document.querySelector("#read-aloud");
+const readAloudRate = document.querySelector("#read-aloud-rate");
+const DAILY_KEY = "synergy.daily.v1";
+let dailyBrowseOverride = false;
+let speechUtterance = null;
 let chainTarget = [];
 let chainPicked = [];
 const previousButton = reader.querySelector(".reader-arrow-prev");
@@ -946,6 +954,82 @@ function setupWhiteboard() {
 }
 
 
+
+function localDay(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function loadDaily() {
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (!raw) return { version: 1, day: null, lastBriefId: null };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { version: 1, day: null, lastBriefId: null };
+    return {
+      version: 1,
+      day: typeof parsed.day === "string" ? parsed.day : null,
+      lastBriefId: typeof parsed.lastBriefId === "string" ? parsed.lastBriefId : null
+    };
+  } catch {
+    return { version: 1, day: null, lastBriefId: null };
+  }
+}
+
+function saveDaily(state) {
+  localStorage.setItem(DAILY_KEY, JSON.stringify(state));
+}
+
+function markDoneToday(briefId) {
+  saveDaily({ version: 1, day: localDay(), lastBriefId: briefId || null });
+  dailyBrowseOverride = false;
+  renderDoneToday();
+}
+
+function renderDoneToday() {
+  const daily = loadDaily();
+  const active = daily.day === localDay() && !dailyBrowseOverride;
+  document.body.classList.toggle("is-done-today", active);
+  if (doneToday) doneToday.hidden = !active;
+}
+
+function stopReadAloud() {
+  if (!("speechSynthesis" in window)) {
+    if (readAloudBtn) readAloudBtn.setAttribute("aria-pressed", "false");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  speechUtterance = null;
+  if (readAloudBtn) readAloudBtn.setAttribute("aria-pressed", "false");
+}
+
+function startReadAloud() {
+  if (!currentArticle || !("speechSynthesis" in window)) {
+    if (readAloudBtn) {
+      readAloudBtn.disabled = true;
+      readAloudBtn.title = "Speech not available in this browser";
+    }
+    return;
+  }
+  const slide = currentArticle.slides[currentSlideIndex];
+  if (!slide) return;
+  stopReadAloud();
+  const rate = Number(readAloudRate?.value || 1) || 1;
+  const utter = new SpeechSynthesisUtterance(`${slide.title}. ${slide.body}`);
+  utter.rate = Math.min(1.2, Math.max(0.8, rate));
+  utter.onend = () => {
+    if (speechUtterance === utter) {
+      speechUtterance = null;
+      readAloudBtn?.setAttribute("aria-pressed", "false");
+    }
+  };
+  speechUtterance = utter;
+  readAloudBtn?.setAttribute("aria-pressed", "true");
+  window.speechSynthesis.speak(utter);
+}
+
 function paintChain(poolSteps) {
   chainPool.replaceChildren();
   for (const step of poolSteps) {
@@ -1017,6 +1101,8 @@ function renderReaderSlide() {
   readerPrime.hidden = currentSlideIndex !== 0;
   readerPrime.textContent = primingText(currentArticle);
   recallDrawer.classList.toggle("is-ready", currentSlideIndex === currentArticle.slides.length - 1);
+  if (readerDone) readerDone.hidden = currentSlideIndex !== currentArticle.slides.length - 1;
+  stopReadAloud();
   readerProgress.innerHTML = currentArticle.slides.map((item, index) => `
     <button
       type="button"
@@ -1058,7 +1144,9 @@ function openArticle(articleId) {
 }
 
 function closeReader() {
+  stopReadAloud();
   if (reader.open) reader.close();
+  document.documentElement.classList.remove("reader-open");
 }
 
 function setSlide(index) {
@@ -2214,6 +2302,36 @@ chainReset?.addEventListener("click", () => {
   chainPicked = [];
   chainFeedback.textContent = "";
   if (chainTarget.length) paintChain(shuffleSteps(chainTarget));
+});
+
+
+renderDoneToday();
+
+doneTodayResume?.addEventListener("click", () => {
+  dailyBrowseOverride = true;
+  renderDoneToday();
+});
+
+readerDone?.addEventListener("click", () => {
+  if (!currentArticle) return;
+  markDoneToday(currentArticle.id);
+  stopReadAloud();
+  reader.close();
+  document.documentElement.classList.remove("reader-open");
+});
+
+readAloudBtn?.addEventListener("click", () => {
+  if (readAloudBtn.getAttribute("aria-pressed") === "true") stopReadAloud();
+  else startReadAloud();
+});
+
+readAloudRate?.addEventListener("change", () => {
+  if (readAloudBtn?.getAttribute("aria-pressed") === "true") startReadAloud();
+});
+
+window.addEventListener("pagehide", stopReadAloud);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopReadAloud();
 });
 
 if ("serviceWorker" in navigator) {

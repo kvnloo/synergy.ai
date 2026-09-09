@@ -144,6 +144,16 @@
         </div>
       </section>
 
+      <section class="done-today shell" id="done-today" hidden aria-labelledby="done-today-title">
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Stopping point</p>
+            <h2 id="done-today-title">You're done for today</h2>
+          </div>
+          <p class="done-today-note">One brief is enough. Come back tomorrow — or take two minutes on due recall only.</p>
+        </div>
+        <button type="button" id="done-today-resume" class="done-today-resume">Browse anyway</button>
+      </section>
       <section class="stories shell" id="latest" aria-labelledby="stories-title">
         <div class="section-heading stories-heading">
           <div><p class="eyebrow">Field notes</p><h2 id="stories-title">What deserves attention</h2></div>
@@ -255,6 +265,16 @@
           <div class="reader-actions">
             <button class="voice-toggle" type="button" aria-pressed="false" aria-label="Voice"><span aria-hidden="true">●</span><span>Voice</span></button>
             <button class="board-toggle" type="button" aria-expanded="false" aria-controls="prototype-board">Ideas <span id="board-count">0</span></button>
+            <button class="reader-done" id="reader-done" type="button" hidden>I'm done</button>
+            <div class="read-aloud-controls">
+              <button class="read-aloud" id="read-aloud" type="button" aria-pressed="false">Listen</button>
+              <label class="sr-only" for="read-aloud-rate">Speech rate</label>
+              <select id="read-aloud-rate" aria-label="Speech rate">
+                <option value="0.9">0.9×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.1">1.1×</option>
+              </select>
+            </div>
             <button class="reader-close" type="button" aria-label="Close briefing">Close</button>
           </div>
         </header>

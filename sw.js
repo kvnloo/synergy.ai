@@ -1,4 +1,4 @@
-const VERSION = "2026-09-09-c2";
+const VERSION = "2026-09-09-c3";
 const CACHE = `synergy-${VERSION}`;
 const SHELL = [
   "./",
