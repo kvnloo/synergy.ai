@@ -117,6 +117,18 @@
         </aside>
       </section>
 
+      <section class="recall-due shell" id="recall-due" hidden aria-labelledby="recall-due-title">
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Due today</p>
+            <h2 id="recall-due-title"></h2>
+          </div>
+          <p class="recall-due-note">Two minutes now beats re-reading later.</p>
+        </div>
+        <div id="recall-due-list"></div>
+      </section>
+
+
       <section class="briefing-band" aria-label="Editorial note">
         <div class="shell briefing-inner">
           <p class="eyebrow">Why this exists</p>
@@ -241,6 +253,7 @@
           </div>
           <div class="reader-copy">
             <p class="reader-disclosure">AI-assisted synthesis / inspect the evidence</p>
+            <p class="reader-prime" id="reader-prime" hidden></p>
             <h2 id="reader-title"></h2>
             <p class="reader-body" id="reader-body"></p>
           </div>
@@ -249,6 +262,11 @@
             <summary><span>Trace the evidence</span><span id="evidence-count"></span></summary>
             <div id="evidence-list"></div>
             <p class="evidence-note">These are source links and typed relationships, not a universal confidence score. Verify the source before relying on a claim.</p>
+          </details>
+          <details class="recall-drawer" id="recall-drawer">
+            <summary><span>Test yourself</span><span id="recall-count"></span></summary>
+            <p class="recall-note">Say the answer before you reveal it, then grade yourself honestly. Your grades stay on this device and set when each prompt returns.</p>
+            <div id="recall-list"></div>
           </details>
           <details class="ai-drawer" id="ai-drawer">
             <summary><span>Ask AI about this brief</span><span id="ai-connection-label">Connect</span></summary>

@@ -1,6 +1,7 @@
 import { articles } from "./content.js";
 import { setupSynCompanion } from "./companion-bot.js";
 import { setupBoard } from "./board.js";
+import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall } from "./recall.js";
 
 const NON_FILTER_TOPICS = new Set(["projects", "contribute"]);
 const TASK_QUEUE_NEW = "https://github.com/kvnloo/synergy-tasks/issues/new";
@@ -56,6 +57,13 @@ const causalChain = document.querySelector("#causal-chain");
 const evidenceList = document.querySelector("#evidence-list");
 const evidenceCount = document.querySelector("#evidence-count");
 const evidenceDrawer = document.querySelector("#evidence-drawer");
+const recallDrawer = document.querySelector("#recall-drawer");
+const recallList = document.querySelector("#recall-list");
+const recallCount = document.querySelector("#recall-count");
+const readerPrime = document.querySelector("#reader-prime");
+const recallDue = document.querySelector("#recall-due");
+const recallDueTitle = document.querySelector("#recall-due-title");
+const recallDueList = document.querySelector("#recall-due-list");
 const previousButton = reader.querySelector(".reader-arrow-prev");
 const nextButton = reader.querySelector(".reader-arrow-next");
 const aiDrawer = document.querySelector("#ai-drawer");
@@ -124,6 +132,23 @@ let activeTopic = "all";
 let searchTerm = "";
 let currentArticle = null;
 let currentSlideIndex = 0;
+let recallState = loadState();
+
+function onRecallGrade(id, result) {
+  recallState = grade(recallState, id, result);
+  saveState(recallState);
+  renderDueQueue();
+}
+
+function renderDueQueue() {
+  const due = dueCards(articles, recallState);
+  recallDue.hidden = due.length === 0;
+  if (due.length) {
+    recallDueTitle.textContent = `${due.length} prompt${due.length === 1 ? "" : "s"} to recall`;
+    renderRecall(recallDueList, due, { state: recallState, onGrade: onRecallGrade });
+  }
+}
+
 let touchStartX = null;
 let currentPrototypeBundle = "";
 let currentTaskIssueUrl = "";
@@ -863,6 +888,9 @@ function renderReaderSlide() {
   readerCard.scrollTop = 0;
   evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"}`;
   evidenceDrawer.open = false;
+  readerPrime.hidden = currentSlideIndex !== 0;
+  readerPrime.textContent = primingText(currentArticle);
+  recallDrawer.classList.toggle("is-ready", currentSlideIndex === currentArticle.slides.length - 1);
   readerProgress.innerHTML = currentArticle.slides.map((item, index) => `
     <button
       type="button"
@@ -891,6 +919,10 @@ function openArticle(articleId) {
   prototypeBoard.classList.remove("is-open");
   boardToggle.setAttribute("aria-expanded", "false");
   loadPrototypeDraft();
+  recallDrawer.open = false;
+  const prompts = buildPrompts(article);
+  recallCount.textContent = `${prompts.length} prompts`;
+  renderRecall(recallList, prompts, { state: recallState, onGrade: onRecallGrade });
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
@@ -1917,6 +1949,7 @@ setupBoard({
 
 configureCompanionTransport();
 renderDispatches();
+renderDueQueue();
 renderStories();
 applyFilters();
 setupSectionReveals();

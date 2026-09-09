@@ -158,6 +158,14 @@ class CompanionServerTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn("javascript", response.getheader("Content-Type"))
         self.assertTrue(body)
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request("GET", "/app/recall.js")
+        response = connection.getresponse()
+        body = response.read().decode()
+        connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertIn("javascript", response.getheader("Content-Type"))
+        self.assertIn("buildPrompts", body)
 
 
 if __name__ == "__main__":
