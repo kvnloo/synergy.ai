@@ -3,6 +3,7 @@ from __future__ import annotations
 import hmac
 import json
 import mimetypes
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 import subprocess
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -150,6 +151,8 @@ class CompanionHandler(BaseHTTPRequestHandler):
             "/app/board.js": "board.js",
             "/app/recall.js": "recall.js",
             "/app/trust.js": "trust.js",
+            "/app/sw.js": "sw.js",
+            "/app/manifest.webmanifest": "manifest.webmanifest",
             "/app/data/board.json": "data/board.json",
         }
         relative = files.get(path)

@@ -73,6 +73,7 @@ const verifyToday = document.querySelector("#verify-today");
 const verifyTodayTitle = document.querySelector("#verify-today-title");
 const verifyTodayMeta = document.querySelector("#verify-today-meta");
 const verifyTodayOpen = document.querySelector("#verify-today-open");
+const offlineReady = document.querySelector("#offline-ready");
 let verifySourceIndex = 0;
 let boardApi = { getBoard: () => null };
 const recallDrawer = document.querySelector("#recall-drawer");
@@ -2085,3 +2086,18 @@ verifyForm.addEventListener("submit", async (event) => {
     verifyToday.hidden = true;
   }
 }
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").then(() => {
+    if (offlineReady) offlineReady.hidden = false;
+  }).catch(() => {});
+}
+window.addEventListener("offline", () => {
+  if (!offlineReady) return;
+  offlineReady.textContent = "Offline · showing the saved copy";
+  offlineReady.hidden = false;
+});
+window.addEventListener("online", () => {
+  if (!offlineReady) return;
+  offlineReady.textContent = "Available offline on this device";
+});
