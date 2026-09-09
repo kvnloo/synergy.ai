@@ -170,3 +170,30 @@ export function renderRecall(container, prompts, { state, onGrade }) {
     container.append(article);
   }
 }
+
+export function scoreExplanation(text, summary) {
+  const norm = (s) =>
+    String(s || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 3);
+  const words = new Set(norm(text));
+  const targets = norm(summary);
+  if (!words.size || !targets.length) return { overlap: 0, hits: 0, total: targets.length };
+  const hits = targets.filter((w) => words.has(w)).length;
+  return { overlap: hits / targets.length, hits, total: targets.length };
+}
+
+export function shuffleSteps(steps) {
+  const copy = [...steps];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  // avoid already-correct shuffle
+  if (copy.length > 1 && copy.every((s, idx) => s === steps[idx])) {
+    [copy[0], copy[1]] = [copy[1], copy[0]];
+  }
+  return copy;
+}

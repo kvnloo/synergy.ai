@@ -1,7 +1,7 @@
 import { articles } from "./content.js";
 import { setupSynCompanion } from "./companion-bot.js";
 import { setupBoard } from "./board.js";
-import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall } from "./recall.js";
+import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall, scoreExplanation, shuffleSteps } from "./recall.js";
 import {
   findVerifyTask,
   buildVerificationComment,
@@ -83,6 +83,18 @@ const readerPrime = document.querySelector("#reader-prime");
 const recallDue = document.querySelector("#recall-due");
 const recallDueTitle = document.querySelector("#recall-due-title");
 const recallDueList = document.querySelector("#recall-due-list");
+const explainBox = document.querySelector("#explain-box");
+const explainInput = document.querySelector("#explain-input");
+const explainCheck = document.querySelector("#explain-check");
+const explainFeedback = document.querySelector("#explain-feedback");
+const chainRebuild = document.querySelector("#chain-rebuild");
+const chainPool = document.querySelector("#chain-pool");
+const chainOrder = document.querySelector("#chain-order");
+const chainCheck = document.querySelector("#chain-check");
+const chainReset = document.querySelector("#chain-reset");
+const chainFeedback = document.querySelector("#chain-feedback");
+let chainTarget = [];
+let chainPicked = [];
 const previousButton = reader.querySelector(".reader-arrow-prev");
 const nextButton = reader.querySelector(".reader-arrow-next");
 const aiDrawer = document.querySelector("#ai-drawer");
@@ -406,11 +418,31 @@ function setTopic(topic, selectedLink) {
   applyFilters();
 }
 
+function evidenceTypeLabel(source) {
+  const raw = (source.kind || source.evidenceType || source.relation || "").toLowerCase();
+  const map = {
+    guidance: "guidance",
+    "peer-reviewed": "peer-reviewed",
+    reporting: "reporting",
+    dataset: "dataset",
+    method: "method",
+    principle: "principle",
+    context: "context",
+    limits: "limits",
+    qualifies: "qualifies",
+    supports: "supports",
+    risk: "reporting"
+  };
+  return map[raw] || source.relation || "source";
+}
+
 function evidenceMarkup(source, index) {
+  const type = evidenceTypeLabel(source);
   return `
     <article class="evidence-item">
       <div class="evidence-relation">${source.relation}</div>
       <div>
+        <span class="evidence-type">${type}</span>
         <a href="${source.url}" target="_blank" rel="noreferrer">${source.title} ↗</a>
         <p>${source.note}</p>
         <button class="evidence-verify" type="button" data-source="${index}">Verify</button>
@@ -913,6 +945,55 @@ function setupWhiteboard() {
   whiteboardResizeObserver.observe(whiteboardStage);
 }
 
+
+function paintChain(poolSteps) {
+  chainPool.replaceChildren();
+  for (const step of poolSteps) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = step;
+    btn.dataset.step = step;
+    btn.addEventListener("click", () => {
+      chainPicked.push(step);
+      chainFeedback.textContent = "";
+      const remaining = poolSteps.slice();
+      const at = remaining.indexOf(step);
+      if (at >= 0) remaining.splice(at, 1);
+      paintChain(remaining);
+    });
+    chainPool.append(btn);
+  }
+  chainOrder.replaceChildren();
+  chainPicked.forEach((step, index) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = `${index + 1}. ${step}`;
+    btn.dataset.step = step;
+    btn.addEventListener("click", () => {
+      chainPicked.splice(index, 1);
+      chainFeedback.textContent = "";
+      const remaining = poolSteps.slice();
+      remaining.push(step);
+      paintChain(remaining);
+    });
+    chainOrder.append(btn);
+  });
+}
+
+function setupExplainAndChain(article) {
+  if (!explainBox || !chainRebuild) return;
+  explainInput.value = "";
+  explainFeedback.textContent = "";
+  explainBox.hidden = false;
+  const chainSlide = article.slides[1] || article.slides[0];
+  chainTarget = [...(chainSlide?.chain || [])];
+  chainPicked = [];
+  chainFeedback.textContent = "";
+  chainRebuild.hidden = chainTarget.length === 0;
+  if (chainTarget.length) paintChain(shuffleSteps(chainTarget));
+}
+
+
 function renderReaderSlide() {
   const slide = currentArticle.slides[currentSlideIndex];
   const slideNumber = currentSlideIndex + 1;
@@ -968,6 +1049,7 @@ function openArticle(articleId) {
   const prompts = buildPrompts(article);
   recallCount.textContent = `${prompts.length} prompts`;
   renderRecall(recallList, prompts, { state: recallState, onGrade: onRecallGrade });
+  setupExplainAndChain(article);
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
@@ -2086,6 +2168,53 @@ verifyForm.addEventListener("submit", async (event) => {
     verifyToday.hidden = true;
   }
 }
+
+
+explainCheck?.addEventListener("click", () => {
+  if (!currentArticle) return;
+  const text = explainInput.value.trim();
+  if (text.length < 20) {
+    explainFeedback.textContent = "Write a bit more — about two sentences from memory.";
+    return;
+  }
+  const { overlap, hits, total } = scoreExplanation(text, currentArticle.summary);
+  const id = `${currentArticle.id}:explain`;
+  if (overlap >= 0.25) {
+    recallState = grade(recallState, id, overlap >= 0.45 ? "got" : "hard");
+    saveState(recallState);
+    explainFeedback.textContent = `Close enough (${hits}/${total} key terms). Saved to your device schedule.`;
+  } else {
+    recallState = grade(recallState, id, "forgot");
+    saveState(recallState);
+    explainFeedback.textContent = `Sparse match (${hits}/${total}). Peek the summary, then try once more in your own words.`;
+  }
+  renderDueQueue();
+});
+
+chainCheck?.addEventListener("click", () => {
+  if (!currentArticle || !chainTarget.length) return;
+  const ok = chainPicked.length === chainTarget.length && chainPicked.every((s, i) => s === chainTarget[i]);
+  const id = `${currentArticle.id}:1:chain-ui`;
+  if (ok) {
+    recallState = grade(recallState, id, "got");
+    saveState(recallState);
+    chainFeedback.textContent = "Correct order. Scheduled for later recall.";
+  } else if (chainPicked.length < chainTarget.length) {
+    chainFeedback.textContent = `Place all ${chainTarget.length} steps, then check.`;
+    return;
+  } else {
+    recallState = grade(recallState, id, "forgot");
+    saveState(recallState);
+    chainFeedback.textContent = "Not yet — reset and try again from memory.";
+  }
+  renderDueQueue();
+});
+
+chainReset?.addEventListener("click", () => {
+  chainPicked = [];
+  chainFeedback.textContent = "";
+  if (chainTarget.length) paintChain(shuffleSteps(chainTarget));
+});
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").then(() => {

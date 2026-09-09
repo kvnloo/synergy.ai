@@ -374,4 +374,69 @@ export const articles = [
       }
     ]
   }
+  ,
+  {
+    id: "sleep-infrastructure",
+    topic: "health",
+    label: "Health",
+    readTime: "7 min briefing",
+    title: "Sleep is public-health infrastructure. Shift work, heat, and light decide who gets it.",
+    summary: "Sleep loss is not only personal discipline. Rosters, night heat, and light at the wrong time break recovery for responders and civilians. Treat sleep like water and power: design the system, then coach the person.",
+    visual: "climate",
+    visualWord: "SLEEP / SHIFT",
+    reviewed: "2026-09-09",
+    slides: [
+      {
+        kind: "The brief",
+        title: "A population that cannot sleep cannot recover, decide, or stay safe.",
+        body: "Short or broken sleep raises error rates, injury, cardiovascular risk, and mental-health load. In crises the people who must stay awake — clinicians, drivers, guards, caregivers — often have the least recovery window. Individual advice fails when the roster, the room, and the light work against sleep.",
+        chain: ["Work and heat load rise", "Sleep opportunity shrinks", "Recovery debt builds", "Errors and illness rise", "Community capacity falls"],
+        sources: [
+          { relation: "supports", kind: "guidance", title: "WHO: mental health of health and care workers", url: "https://www.who.int/publications/i/item/9789240049338", note: "Workload, rest, and support for health workers." },
+          { relation: "supports", kind: "guidance", title: "CDC/NIOSH: shift work and sleep", url: "https://www.cdc.gov/niosh/work-hour-training-for-nurses/longhours/mod6/01.html", note: "Shift work, circadian disruption, and fatigue risk." }
+        ]
+      },
+      {
+        kind: "Why it exists",
+        title: "Rosters, heat, and light are designed — so is the sleep loss.",
+        body: "Night shifts fight the circadian clock. Hot rooms and power cuts block deep sleep after day duty. Screens and security lighting delay melatonin. Informal overtime and understaffing steal the off-duty window. The result looks like weak willpower; the mechanism is environmental and organizational.",
+        chain: ["Circadian night work", "Hot or noisy rest spaces", "Wrong-time light", "Compressed off-duty windows", "Chronic sleep debt"],
+        sources: [
+          { relation: "supports", kind: "peer-reviewed", title: "Occupational sleep medicine overview (NIOSH)", url: "https://www.cdc.gov/niosh/topics/workschedules/", note: "Work schedules and sleep impairment pathways." },
+          { relation: "context", kind: "guidance", title: "WHO heat and health", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", note: "Heat stress interacts with rest and recovery." }
+        ]
+      },
+      {
+        kind: "What has been tried",
+        title: "Forward-rotating shifts, dark cool rest, and protected handoffs beat pep talks.",
+        body: "Evidence-aligned measures include limiting consecutive nights, clockwise shift rotation, strategic naps where safe, caffeine timing rules, blackout and cooling for day sleep, and supervisor checks for fatigue-critical tasks. Personal hygiene tips help only after the system creates a sleep opportunity.",
+        chain: ["Limit consecutive nights", "Rotate shifts forward", "Protect a sleep opportunity", "Cool and darken rest spaces", "Screen fatigue before critical tasks"],
+        sources: [
+          { relation: "method", kind: "guidance", title: "NIOSH work schedule training", url: "https://www.cdc.gov/niosh/work-hour-training-for-nurses/default.html", note: "Practical controls for long hours and shift work." },
+          { relation: "supports", kind: "guidance", title: "WHO guidelines on mental health at work", url: "https://www.who.int/publications/i/item/9789240053052", note: "Organizational interventions over individual-only approaches." }
+        ]
+      },
+      {
+        kind: "Across borders",
+        title: "Transfer the sleep opportunity, not a Western bedroom checklist.",
+        body: "A blackout curtain assumption fails in shared shelters. Cooling assumptions fail without power. Nap rooms need security and gender safety. Start from function: uninterrupted recovery time, darkness or eye cover, lower thermal load, and a culture that does not punish rest. Map who controls rosters, generators, and sleeping spaces before copying a protocol.",
+        chain: ["Define recovery function", "Map roster authority", "Map power and shelter", "Fit local safety constraints", "Pilot with stop conditions"],
+        sources: [
+          { relation: "method", kind: "guidance", title: "Sphere Handbook: shelter and settlement", url: "https://spherestandards.org/handbook-2018/", note: "Dignity, privacy, and environmental standards that affect rest." },
+          { relation: "context", kind: "reporting", title: "ICRC: health care in danger — stress on staff", url: "https://www.icrc.org/en/what-we-do/health-care-danger", note: "Operational stress context for responders." }
+        ]
+      },
+      {
+        kind: "Better incentives",
+        title: "Pay for safe staffing and recovery windows, not heroic continuous duty.",
+        body: "If metrics reward hours present, organizations will burn sleep. Better measures: consecutive nights capped, incident rates after nights, self-reported sleep opportunity, and protected off-duty blocks. A field checklist for shift responders: darken and cool the sleep space, fixed wind-down, no non-urgent calls in the first sleep cycle, hydrate and light meal, plan commute safety when drowsy, escalate when errors cluster.",
+        chain: ["Cap consecutive nights", "Measure sleep opportunity", "Protect off-duty blocks", "Cool dark rest spaces", "Stop heroic overtime norms"],
+        sources: [
+          { relation: "principle", kind: "guidance", title: "WHO: decent work and health", url: "https://www.who.int/news-room/fact-sheets/detail/protecting-workers-health", note: "Working-time and health protection framing." },
+          { relation: "supports", kind: "guidance", title: "CDC: sleep and sleep disorders", url: "https://www.cdc.gov/sleep/about/index.html", note: "Population sleep health baseline." }
+        ]
+      }
+    ]
+  }
+
 ];

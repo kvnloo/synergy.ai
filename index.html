@@ -294,6 +294,22 @@
             <summary><span>Test yourself</span><span id="recall-count"></span></summary>
             <p class="recall-note">Say the answer before you reveal it, then grade yourself honestly. Your grades stay on this device and set when each prompt returns.</p>
             <div id="recall-list"></div>
+            <section class="explain-box" id="explain-box" hidden>
+              <h3>In two sentences, what should a responder remember?</h3>
+              <label class="sr-only" for="explain-input">Your explanation</label>
+              <textarea id="explain-input" maxlength="500" rows="3" placeholder="Write from memory, then check against the brief summary."></textarea>
+              <button type="button" id="explain-check">Check against summary</button>
+              <p class="explain-feedback" id="explain-feedback" aria-live="polite"></p>
+            </section>
+            <section class="chain-rebuild" id="chain-rebuild" hidden>
+              <h3>Rebuild the chain</h3>
+              <p class="recall-note">Tap steps in order. Starts and ends are fixed once placed.</p>
+              <div class="chain-pool" id="chain-pool"></div>
+              <div class="chain-order" id="chain-order" aria-label="Your order"></div>
+              <button type="button" id="chain-check">Check order</button>
+              <button type="button" id="chain-reset">Reset</button>
+              <p class="chain-feedback" id="chain-feedback" aria-live="polite"></p>
+            </section>
           </details>
           <details class="ai-drawer" id="ai-drawer">
             <summary><span>Ask AI about this brief</span><span id="ai-connection-label">Connect</span></summary>
