@@ -3,61 +3,117 @@ export const articles = [
     id: "sudan-access",
     topic: "conflict",
     label: "Conflict",
-    readTime: "7 min briefing",
-    title: "A crisis is also a logistics system. Sudan shows where it breaks.",
-    summary: "News tells us that aid is blocked. The harder question is how: which roads close, who controls access, and what local responders need to keep moving.",
+    readTime: "8 min seminar",
+    title: "Aid is not a warehouse problem. In Sudan it is a contested route.",
+    summary: "Headlines say aid is blocked. The useful question is who can move, who can refuse, and which local teams still reach people when internationals cannot. This brief holds UN, Red Cross, field, and standards voices side by side instead of collapsing them into one line.",
     visual: "conflict",
     visualWord: "ACCESS / POWER",
-    reviewed: "2026-09-03",
+    reviewed: "2026-09-09",
     slides: [
       {
         kind: "The brief",
-        title: "Aid access is a chain. One broken link can stop the whole response.",
-        body: "Food, medicine, staff, fuel, permissions, roads, communications, and local trust have to work together. Describing the crisis only by how many supplies exist misses whether those supplies can reach people safely.",
+        title: "Access is a chain. A single broken link can stop the whole response.",
+        body: "Supplies sitting in Port Sudan or across a border do not feed anyone. Food, fuel, staff, permits, road control, communications, and local trust have to line up. When any one of those fails, the shortage you see on camera is often downstream of politics, not a simple logistics shortfall.",
         chain: ["Supplies exist", "Permission is granted", "Routes stay open", "Local teams distribute", "People receive aid"],
+        crosscut: {
+          agree: "UN operational reporting and ICRC field work both treat movement and protection as the bottleneck, not only tonnage available.",
+          tension: "Agency situation language stays high-level and system-wide. Field operators stress concrete corridor control, personal risk, and who still has community trust.",
+          open: "Public pages rarely name the exact checkpoint, fee, or commander that closed a road on a given day. That detail lives in local reporting and private security notes."
+        },
+        seminar: [
+          "If tonnage is high but deliveries fail, what failed first: permit, road, or last-mile trust?",
+          "Whose map of the chain would you trust more on the ground tomorrow?",
+          "What would count as evidence that the chain is healing, not just that a convoy left a warehouse?"
+        ],
         sources: [
-          { relation: "supports", title: "UN OCHA: Sudan", url: "https://www.unocha.org/sudan", note: "Operational overview and humanitarian access reporting." },
-          { relation: "context", title: "ICRC: Sudan", url: "https://www.icrc.org/en/where-we-work/sudan", note: "Protection and operational context from an active humanitarian organization." }
+          { relation: "supports", kind: "guidance", lens: "agency", org: "UN OCHA", title: "UN OCHA: Sudan", url: "https://www.unocha.org/sudan", claim: "Humanitarian operations in Sudan are framed around access constraints and people in need, not inventory alone.", quote: "Humanitarian access remains a decisive factor in whether assistance reaches people in need across Sudan.", quoteKind: "paraphrase", note: "OCHA Sudan hub frames the emergency through access and operational constraints." },
+          { relation: "supports", kind: "guidance", lens: "agency", org: "ICRC", title: "ICRC: Sudan", url: "https://www.icrc.org/en/where-we-work/africa/sudan", claim: "Protection and neutral action sit beside delivery. Access is inseparable from how parties treat medical and civilian movement.", quote: "The ICRC works to protect people affected by armed conflict and to support essential services where fighting has broken civilian systems.", quoteKind: "paraphrase", note: "ICRC country framing for conflict-affected civilians and services." },
+          { relation: "context", kind: "reporting", lens: "local", org: "MSF", title: "MSF: Sudan conflict response", url: "https://www.msf.org/sudan", claim: "Field medical teams describe interrupted hospitals, unsafe roads, and patients who cannot move when front lines shift.", quote: "When hospitals are cut off or emptied by fighting, the medical chain fails even if supplies exist elsewhere in the country.", quoteKind: "paraphrase", note: "MSF public Sudan conflict response pages emphasize medical access under violence." },
+          { relation: "method", kind: "standard", lens: "standard", org: "CHS", title: "Core Humanitarian Standard", url: "https://www.corehumanitarianstandard.org/the-standard", claim: "People affected by crisis are the measure of quality, not the volume an agency shipped.", quote: "Communities and people affected by crisis receive the assistance and the protection they need, delivered in a way that supports their dignity.", quoteKind: "paraphrase", note: "CHS quality and accountability commitments." }
         ]
       },
       {
         kind: "Why it exists",
-        title: "Access becomes leverage when authority is fragmented.",
-        body: "Armed actors can treat roads, permits, communications, and aid movements as sources of control. Local responders then face overlapping authorities and personal risk. The visible shortage is downstream of a political and security system.",
+        title: "When authority splits, roads become leverage.",
+        body: "Armed actors can treat permits, corridors, fuel, and communications as tools of control. Local responders then face overlapping checkpoints and personal risk. The empty shelf is often the last visible step of a political and security system.",
         chain: ["Authority fragments", "Access gains political value", "Permits and routes become leverage", "Delivery slows", "Civilian harm compounds"],
+        crosscut: {
+          agree: "Access guidance and humanitarian principles both say movement can be politicized when parties to a conflict control territory.",
+          tension: "Principles language is universal. Operational access notes are about specific gates, escorts, and refusals that change week to week.",
+          open: "Public sources under-specify which local authorities can actually clear a convoy in a given locality."
+        },
+        seminar: [
+          "Is the blockage a policy, a checkpoint business, or a security scare?",
+          "What would a local transporter say that a capital-based cluster meeting would miss?",
+          "If two authorities claim the same road, whose stamp is necessary and whose is theater?"
+        ],
         sources: [
-          { relation: "supports", title: "UN OCHA: Access resources", url: "https://www.unocha.org/humanitarian-access", note: "Defines humanitarian access and recurring constraints." },
-          { relation: "qualifies", title: "ICRC: Humanitarian principles", url: "https://www.icrc.org/en/document/fundamental-principles-red-cross-and-red-crescent", note: "Explains why neutral, independent action matters when access is contested." }
+          { relation: "supports", kind: "guidance", lens: "agency", org: "UN OCHA", title: "UN OCHA: Humanitarian access", url: "https://www.unocha.org/themes/humanitarian-access", claim: "Access is defined as the ability of humanitarian actors to reach people in need, and of people to access assistance and services.", quote: "Humanitarian access is the ability of humanitarian actors to reach populations in need, and the ability of affected populations to access humanitarian assistance and services.", quoteKind: "paraphrase", note: "OCHA access theme definition used across emergencies." },
+          { relation: "qualifies", kind: "principle", lens: "standard", org: "ICRC", title: "ICRC: Fundamental Principles", url: "https://www.icrc.org/en/document/fundamental-principles-red-cross-and-red-crescent", claim: "Neutrality and independence are operating conditions for access, not slogans. Parties test them constantly.", quote: "The Movement may not take sides in hostilities or engage at any time in controversies of a political, racial, religious or ideological nature.", quoteKind: "paraphrase", note: "Neutrality principle text from the Fundamental Principles." },
+          { relation: "context", kind: "reporting", lens: "press", org: "UN News", title: "UN reporting on Sudan access and protection", url: "https://news.un.org/en/focus/sudan", claim: "Public UN reporting repeatedly ties civilian harm to blocked movement of aid and health staff.", quote: "UN reporting on Sudan regularly links rising needs to restrictions on humanitarian movement and attacks on civilian infrastructure.", quoteKind: "paraphrase", note: "Composite of UN News Sudan focus framing." }
         ]
       },
       {
         kind: "What has been tried",
-        title: "Negotiation, local networks, cash, and cross-border routes solve different links.",
-        body: "No single intervention repairs the chain. Negotiation can open a route but not make markets function. Cash can preserve choice where goods remain available. Local organizations often retain access when international teams cannot, but shifting delivery without shifting power and funding leaves risk with them.",
+        title: "Negotiation, local networks, cash, and cross-border routes fix different links.",
+        body: "No single tool repairs the chain. A negotiated corridor can open a road and still leave markets dead. Cash helps when goods exist. Local organizations often keep reaching people after internationals pull back, but shifting delivery without shifting money and decision power just moves the risk onto them.",
         chain: ["Name the failed link", "Choose a matching intervention", "Fund local capacity", "Track access and outcomes", "Adapt when control shifts"],
+        crosscut: {
+          agree: "Localization guidance and displacement response both say local actors are not optional subcontractors when access is contested.",
+          tension: "Operational agencies talk corridors and pipelines. Localization policy talks power, overhead, and who designs the response.",
+          open: "Public materials rarely publish failure rates for specific corridor deals or cash programs under active fighting."
+        },
+        seminar: [
+          "Which failed link are you actually funding?",
+          "If local teams do the dangerous last mile, who holds the budget and the stop conditions?",
+          "What evidence would tell you a corridor deal is real rather than a press release?"
+        ],
         sources: [
-          { relation: "supports", title: "UNHCR: Sudan emergency", url: "https://www.unhcr.org/emergencies/sudan-emergency", note: "Regional displacement response and delivery context." },
-          { relation: "limits", title: "IASC: Guidance on localization", url: "https://interagencystandingcommittee.org/grand-bargain-official-website/localisation", note: "Shows that local leadership requires funding and decision power, not subcontracting alone." }
+          { relation: "supports", kind: "guidance", lens: "agency", org: "UNHCR", title: "UNHCR: Sudan emergency", url: "https://www.unhcr.org/emergencies/sudan-emergency", claim: "Displacement response treats protection, shelter, and cross-border movement as one system with Sudan's internal access fight.", quote: "The Sudan emergency is driven by mass displacement inside the country and across borders, with protection and assistance strained by conflict conditions.", quoteKind: "paraphrase", note: "UNHCR emergency framing for Sudan." },
+          { relation: "limits", kind: "guidance", lens: "policy", org: "IASC", title: "IASC / Grand Bargain localisation", url: "https://interagencystandingcommittee.org/grand-bargain-official-website/localisation", claim: "Local leadership needs money and decision rights. Subcontracting delivery while keeping strategy central is not localization.", quote: "Localisation requires more direct funding and decision-making power for local and national responders, not only implementing roles under international contracts.", quoteKind: "paraphrase", note: "Grand Bargain localisation direction." },
+          { relation: "method", kind: "standard", lens: "standard", org: "Sphere", title: "Sphere Handbook", url: "https://spherestandards.org/handbook-2018/", claim: "Technical standards still demand dignity, communication with affected people, and protection analysis when choosing modalities.", quote: "People's needs and capacities should shape the response, including how assistance is delivered and how protection risks are reduced.", quoteKind: "paraphrase", note: "Sphere people-centered response framing." }
         ]
       },
       {
         kind: "Across borders",
-        title: "Transfer the function, not the program name.",
-        body: "A corridor negotiated through a centralized ministry will not transfer unchanged to a federal system or an area with competing authorities. Start by mapping who can authorize movement, who controls procurement, what sanctions apply, and which local institutions people trust.",
+        title: "Copy the function, not the logo on the convoy.",
+        body: "A corridor that runs through one ministry will not transfer into a place with three competing authorities. Start with who can authorize movement, who controls fuel and trucks, what sanctions apply, and which local institutions people still trust. Then rebuild the function under local law and risk.",
         chain: ["Define the function", "Map decision authority", "Map legal constraints", "Find a trusted local operator", "Pilot with stop conditions"],
+        crosscut: {
+          agree: "Governance research and neutral intermediary practice both say institutions and trust decide whether a delivery design survives contact with politics.",
+          tension: "World Bank governance framing is structural and slow. ICRC intermediary practice is tactical and conflict-specific.",
+          open: "Few public playbooks name the stop conditions that killed a transferred program in another country."
+        },
+        seminar: [
+          "What function are you transferring: fuel, permits, last-mile trust, or all three?",
+          "Who can say no on the road, and who only says no in meetings?",
+          "What would make you cancel the pilot in week two?"
+        ],
         sources: [
-          { relation: "method", title: "World Bank: Governance and the Law", url: "https://www.worldbank.org/en/publication/wdr2017", note: "A framework for understanding how power and institutions change policy outcomes." },
-          { relation: "context", title: "ICRC: Neutral intermediary role", url: "https://www.icrc.org/en/what-we-do/neutral-intermediary", note: "A concrete function that takes different operational forms across conflicts." }
+          { relation: "method", kind: "research", lens: "research", org: "World Bank", title: "WDR 2017: Governance and the Law", url: "https://www.worldbank.org/en/publication/wdr2017", claim: "Policy fails when it ignores who holds power and how commitment is enforced.", quote: "Governance is about the process of making and implementing policy under the distribution of power in society.", quoteKind: "paraphrase", note: "WDR 2017 core governance framing." },
+          { relation: "context", kind: "guidance", lens: "agency", org: "ICRC", title: "ICRC: Neutral intermediary", url: "https://www.icrc.org/en/what-we-do/neutral-intermediary", claim: "A neutral intermediary is a function that can take different operational forms across wars.", quote: "The ICRC can act as a neutral intermediary between parties to a conflict to help resolve humanitarian problems.", quoteKind: "paraphrase", note: "ICRC neutral intermediary role description." },
+          { relation: "supports", kind: "guidance", lens: "policy", org: "OCHA", title: "Humanitarian access practical guidance", url: "https://www.unocha.org/themes/humanitarian-access", claim: "Access work is negotiation, law, and logistics together. Exporting a brand without that triad fails.", quote: "Improving access requires coordinated engagement with parties and authorities, grounded in humanitarian principles and international law.", quoteKind: "paraphrase", note: "OCHA access practice framing." }
         ]
       },
       {
         kind: "Better incentives",
         title: "Make cooperation cheaper than obstruction.",
-        body: "Appeals to goodwill are not enough. Agreements need monitoring, public evidence, consequences for diversion, and benefits for reliable access. Funders can reward delivery quality and local decision power instead of volume moved or contracts won.",
+        body: "Appeals to goodwill do not open roads. Deals need monitoring, public evidence, costs for diversion, and benefits for reliable access. Funders can pay for delivery quality and local decision power instead of tonnage theater and contracts won.",
         chain: ["Publish the outcome", "Expose obstruction", "Protect independent monitors", "Reward reliable access", "Move power toward affected communities"],
+        crosscut: {
+          agree: "Accountability standards and business-and-human-rights baselines both reject vanity metrics that hide harm.",
+          tension: "Humanitarian standards center affected people. UNGP language centers corporate responsibility where commercial incentives touch the crisis.",
+          open: "Public donor scorecards still rarely show obstruction events next to disbursement totals."
+        },
+        seminar: [
+          "What metric would make obstruction expensive this month?",
+          "If local communities rated access quality, what would they score that clusters ignore?",
+          "Which funder behavior currently rewards the wrong part of the chain?"
+        ],
         sources: [
-          { relation: "supports", title: "Core Humanitarian Standard", url: "https://www.corehumanitarianstandard.org/the-standard", note: "Commitments for accountable, people-centered humanitarian action." },
-          { relation: "principle", title: "UN Guiding Principles on Business and Human Rights", url: "https://www.ohchr.org/sites/default/files/documents/publications/guidingprinciplesbusinesshr_en.pdf", note: "A baseline for responsibility where commercial incentives affect human outcomes." }
+          { relation: "supports", kind: "standard", lens: "standard", org: "CHS", title: "Core Humanitarian Standard", url: "https://www.corehumanitarianstandard.org/the-standard", claim: "Accountability is owed to people affected by crisis, not only to donors.", quote: "Humanitarian actors are accountable to the people they seek to assist and to those who fund the response.", quoteKind: "paraphrase", note: "CHS accountability commitment." },
+          { relation: "principle", kind: "principle", lens: "policy", org: "OHCHR", title: "UN Guiding Principles on Business and Human Rights", url: "https://www.ohchr.org/sites/default/files/documents/publications/guidingprinciplesbusinesshr_en.pdf", claim: "Where commercial actors affect conflict economies, responsibility does not stop at the warehouse gate.", quote: "Business enterprises should respect human rights, which means they should avoid infringing on the human rights of others and should address adverse human rights impacts.", quoteKind: "paraphrase", note: "UNGP foundational principle on corporate respect for human rights." },
+          { relation: "context", kind: "guidance", lens: "agency", org: "OCHA", title: "OCHA on humanitarian financing and results", url: "https://www.unocha.org/sudan", claim: "Financing narratives that celebrate appeals raised without access outcomes mislead the public.", quote: "Funding without access does not equal assistance delivered.", quoteKind: "paraphrase", note: "Editorial synthesis of OCHA access-plus-funding logic; verify against current Sudan sitreps." }
         ]
       }
     ]
@@ -66,47 +122,117 @@ export const articles = [
     id: "heat-health",
     topic: "climate",
     label: "Climate",
-    readTime: "6 min",
-    title: "Heat is a public-health emergency before it becomes a headline.",
-    summary: "Start with exposure, housing, power, and access to care. The temperature alone does not describe who is at risk.",
+    readTime: "8 min seminar",
+    title: "Heat kills unevenly. The thermometer is not the map.",
+    summary: "The same temperature lands differently on a night-shift worker, an older tenant without power, and a clinic that lost cooling. This brief puts health-agency numbers next to occupational and equity lenses so you can see who is actually in danger.",
     visual: "climate",
     visualWord: "HEAT / CARE",
-    reviewed: "2026-09-03",
+    reviewed: "2026-09-09",
     slides: [
       {
         kind: "The brief",
         title: "The same temperature produces different harm.",
-        body: "Risk depends on exposure, age, health, housing, work, power access, and whether care is reachable. A citywide temperature is useful, but it is not a map of vulnerability.",
+        body: "Risk is exposure plus body plus building plus work plus whether care is reachable. A citywide high is useful meteorology. It is a poor map of who dies.",
         chain: ["Hazard", "Exposure", "Individual vulnerability", "Access to cooling and care", "Health outcome"],
-        sources: [{ relation: "supports", title: "WHO: Climate change, heat and health", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", note: "Health risks, vulnerable groups, and response measures." }]
+        crosscut: {
+          agree: "WHO heat-health guidance treats physiology and social exposure as joint drivers of harm.",
+          tension: "Population mortality figures can hide occupational and housing pockets where risk is concentrated.",
+          open: "Local hospital heat-admission data often lags the headline temperature chart."
+        },
+        seminar: [
+          "Who in your city faces this temperature with no cooling and no day off?",
+          "What would you measure besides degrees?",
+          "If mortality is rising among people over 65, what fails first: housing, power, or outreach?"
+        ],
+        sources: [
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO: Climate change, heat and health", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Heat risk is shaped by age, health, work, and living conditions, not temperature alone.", quote: "Vulnerability to heat is shaped by both physiological factors, such as age and health status, and exposure factors such as occupation and socio-economic conditions.", quoteKind: "verbatim", note: "WHO fact sheet, retrieved 2026-09-09." },
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO heat mortality context", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Heat already kills at population scale, with large regional shares in Asia and Europe.", quote: "Between 2000 2019 studies show approximately 489 000 heat-related deaths occur each year, with 45% of these in Asia and 36% in Europe (2) .", quoteKind: "verbatim", note: "WHO fact sheet annual mortality estimate." },
+          { relation: "context", kind: "guidance", lens: "clinical", org: "WHO", title: "WHO on heatstroke severity", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Heatstroke is not a soft weather story. It is a high-fatality emergency.", quote: "Heatstroke is a medical emergency with a high-case fatality rate.", quoteKind: "verbatim", note: "WHO fact sheet clinical severity line." }
+        ]
       },
       {
         kind: "Why it exists",
-        title: "Heat risk follows the shape of housing and work.",
-        body: "Low tree cover, heat-retaining construction, unsafe jobs, weak grids, and expensive cooling concentrate exposure. These are policy and market outcomes. Weather reveals them; it does not create them alone.",
-        chain: ["Land and labor policy", "Unequal exposure", "Limited cooling", "Delayed care", "Preventable illness"],
-        sources: [{ relation: "supports", title: "WHO and WMO: Heat-health warning systems", url: "https://www.who.int/publications/i/item/9789241599692", note: "Links forecasting to public-health action." }]
+        title: "Heat risk follows housing, work, and power.",
+        body: "Low tree cover, tin roofs, night heat that never drops, outdoor labor, and blackouts turn a hot day into a medical event. People who cannot leave a hot room or stop work carry the load first.",
+        chain: ["Urban heat islands", "Hot housing and night temperatures", "Outdoor and shift work", "Power and water gaps", "Uneven deaths"],
+        crosscut: {
+          agree: "WHO links rising exposure to climate change and flags older adults as a fast-growing mortality group.",
+          tension: "Global averages do not tell a municipal planner which block loses power first.",
+          open: "Many cities still lack published heat-equity maps tied to housing quality."
+        },
+        seminar: [
+          "Which workers cannot stop when the heat index spikes?",
+          "What does a night without cooling do that a hot afternoon does not?",
+          "Where would a blackout turn heat from discomfort into organ failure?"
+        ],
+        sources: [
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO: rising heat exposure", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Exposure is climbing across regions, not only in classic hot zones.", quote: "The number of people exposed to extreme heat is growing exponentially due to climate change in all world regions.", quoteKind: "verbatim", note: "WHO fact sheet exposure line." },
+          { relation: "supports", kind: "guidance", lens: "research", org: "WHO", title: "WHO: older-adult heat mortality trend", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Deaths among people over 65 moved sharply upward over two decades of comparison windows.", quote: "Heat-related mortality for people over 65 years of age increased by approximately 85% between 2000 2004 and 2017 2021 (1) .", quoteKind: "verbatim", note: "WHO fact sheet older-adult mortality change." },
+          { relation: "context", kind: "guidance", lens: "agency", org: "WHO", title: "WHO: Europe 2022 heat deaths", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Even high-income regions take mass casualties when heat intensity spikes.", quote: "In Europe alone in the summer of 2022, an estimated 61 672 heat-related excess deaths occurred (3) .", quoteKind: "verbatim", note: "WHO fact sheet Europe 2022 estimate." }
+        ]
       },
       {
         kind: "What has been tried",
-        title: "Warnings work only when people can act on them.",
-        body: "Heat plans combine forecasts, outreach, cooling spaces, worker protections, clinical readiness, and longer-term urban changes. Alerts underperform when they tell people to stay cool but do not change work rules, transport, power access, or the cost of cooling.",
-        chain: ["Forecast", "Targeted warning", "Material support", "Clinical readiness", "After-action review"],
-        sources: [{ relation: "method", title: "WHO guidance for heat-health action plans", url: "https://www.who.int/publications/i/item/9789289071918", note: "Planning components and institutional responsibilities." }]
+        title: "Heat action plans beat generic summer advice.",
+        body: "Cities that cut deaths early use forecasts, targeted outreach to isolated adults, cooling centers, work/rest rules, and hospital surge triggers. Leaflets without outreach lists and power plans do little.",
+        chain: ["Forecast triggers", "Find high-risk people", "Cooling and water access", "Worker protections", "Clinic surge rules"],
+        crosscut: {
+          agree: "Health guidance treats heat as a managed risk with triggers and responsibilities, not a personal virtue test.",
+          tension: "Clinic protocols and labor rules often sit in different agencies and fail at the handoff.",
+          open: "Published evaluations of which outreach method saves the most lives in informal settlements remain thin."
+        },
+        seminar: [
+          "Who owns the trigger list when the forecast crosses your threshold?",
+          "What is the plan for people who will not enter a cooling center?",
+          "Which workers are still outside your heat ordinance?"
+        ],
+        sources: [
+          { relation: "method", kind: "guidance", lens: "agency", org: "WHO", title: "WHO heat-health responses", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Responses must address acute medical risk and the conditions that produce exposure.", quote: "Heatstroke is a medical emergency with a high-case fatality rate.", quoteKind: "verbatim", note: "Clinical urgency anchors response design." },
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO on extreme heatwave mortality", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Short high-intensity events have killed tens of thousands; plans need surge logic, not only seasonal tips.", quote: "High intensity heatwave events can bring high acute mortality; in 2003, 70 000 people in Europe died as a result of the June August event.", quoteKind: "verbatim", note: "WHO fact sheet on 2003 Europe heatwave." },
+          { relation: "context", kind: "guidance", lens: "research", org: "WHO", title: "WHO: Russian Federation 2010 heatwave", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Multi-week events create excess deaths at national scale when systems stay unprepared.", quote: "In 2010, 56 000 excess deaths occurred during a 44 day heatwave in the Russian Federation.", quoteKind: "verbatim", note: "WHO fact sheet 2010 event." }
+        ]
       },
       {
         kind: "Across borders",
-        title: "Copy the decision triggers, then rebuild the delivery system.",
-        body: "A heat threshold, labor rule, and cooling-center plan depend on local climate, building stock, grid reliability, public authority, and informal work. Transfer the trigger-and-response logic, not another city's temperature number or agency chart.",
-        chain: ["Calibrate local risk", "Assign legal authority", "Reach formal and informal workers", "Test power constraints", "Measure excess harm"],
-        sources: [{ relation: "context", title: "World Bank: Governance and the Law", url: "https://www.worldbank.org/en/publication/wdr2017", note: "Why identical policies produce different results under different institutions." }]
+        title: "Transfer the protection functions, not a temperate-city checklist.",
+        body: "A cooling-center model assumes transport, safe public space, and electricity. Many places need shade rules for markets, water at work sites, generator priority for clinics, and night-ventilation fixes for dense housing. Start from functions: lower body heat, cut exposure time, keep care reachable.",
+        chain: ["Name protection functions", "Map power and water", "Map work patterns", "Fit local buildings", "Pilot with stop conditions"],
+        crosscut: {
+          agree: "WHO's vulnerability framing travels: physiology plus occupation plus socio-economic exposure.",
+          tension: "Exact interventions diverge hard between a formal European flat and an informal roof without grid power.",
+          open: "Cross-border playbooks still under-document failed transfers."
+        },
+        seminar: [
+          "Which function fails first without grid power?",
+          "What does outdoor market labor need that a cooling center never supplies?",
+          "What local institution already reaches older adults on foot?"
+        ],
+        sources: [
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO vulnerability factors", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Any transfer must keep both body and exposure factors in the design.", quote: "Vulnerability to heat is shaped by both physiological factors, such as age and health status, and exposure factors such as occupation and socio-economic conditions.", quoteKind: "verbatim", note: "WHO fact sheet." },
+          { relation: "context", kind: "guidance", lens: "agency", org: "WHO", title: "WHO global exposure growth", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Designs must assume rising exposure everywhere, including places that thought they were temperate.", quote: "The number of people exposed to extreme heat is growing exponentially due to climate change in all world regions.", quoteKind: "verbatim", note: "WHO fact sheet." },
+          { relation: "method", kind: "standard", lens: "standard", org: "Sphere", title: "Sphere Handbook shelter and health links", url: "https://spherestandards.org/handbook-2018/", claim: "Shelter, water, and health standards are the practical carriers of heat protection in crisis settings.", quote: "Shelter and settlement responses should support health, dignity, and protection from environmental risks.", quoteKind: "paraphrase", note: "Sphere shelter/health intent applied to heat." }
+        ]
       },
       {
         kind: "Better incentives",
-        title: "Price prevention against the cost of avoidable harm.",
-        body: "Developers, employers, utilities, and governments respond to different incentives. Building codes, worker protections, service standards, public reporting, and targeted subsidies can make heat safety part of ordinary decisions instead of a charitable extra.",
-        chain: ["Name who controls exposure", "Set a minimum duty", "Measure outcomes", "Publish performance", "Fund adaptation where ability to pay is lowest"],
-        sources: [{ relation: "principle", title: "UN Guiding Principles on Business and Human Rights", url: "https://www.ohchr.org/sites/default/files/documents/publications/guidingprinciplesbusinesshr_en.pdf", note: "Government and business duties when operations affect human rights." }]
+        title: "Pay for fewer heat deaths, not more press conferences.",
+        body: "If agencies are scored on alerts issued, they will issue alerts. Better public measures: heat deaths and hospital admissions by neighborhood, worker rest compliance, power uptime at clinics, and outreach completed to known isolated adults.",
+        chain: ["Publish heat deaths by place", "Audit worker rest rules", "Keep clinic power up", "Finish outreach lists", "Fund shade and housing fixes"],
+        crosscut: {
+          agree: "The WHO numbers make vanity metrics look small next to excess deaths.",
+          tension: "Political incentives still reward visible emergency declarations over quiet housing and labor fixes.",
+          open: "Few budgets publish heat outcomes beside heat-program spend."
+        },
+        seminar: [
+          "Which number would embarrass your city into action this month?",
+          "Who is paid to finish the outreach list?",
+          "What labor rule exists on paper and dies on the worksite?"
+        ],
+        sources: [
+          { relation: "supports", kind: "guidance", lens: "agency", org: "WHO", title: "WHO annual heat deaths", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "The outcome that matters is deaths prevented, at hundreds of thousands per year globally.", quote: "Between 2000 2019 studies show approximately 489 000 heat-related deaths occur each year, with 45% of these in Asia and 36% in Europe (2) .", quoteKind: "verbatim", note: "WHO fact sheet." },
+          { relation: "supports", kind: "guidance", lens: "research", org: "WHO", title: "WHO older-adult mortality rise", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "A rising older-adult death curve is a systems failure signal, not bad luck.", quote: "Heat-related mortality for people over 65 years of age increased by approximately 85% between 2000 2004 and 2017 2021 (1) .", quoteKind: "verbatim", note: "WHO fact sheet." },
+          { relation: "principle", kind: "guidance", lens: "clinical", org: "WHO", title: "WHO heatstroke line", url: "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health", claim: "Clinical severity belongs in public scorecards so heat is not filed under lifestyle advice.", quote: "Heatstroke is a medical emergency with a high-case fatality rate.", quoteKind: "verbatim", note: "WHO fact sheet." }
+        ]
       }
     ]
   },

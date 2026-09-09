@@ -151,6 +151,7 @@ class CompanionHandler(BaseHTTPRequestHandler):
             "/app/board.js": "board.js",
             "/app/recall.js": "recall.js",
             "/app/trust.js": "trust.js",
+            "/app/perspectives.js": "perspectives.js",
             "/app/sw.js": "sw.js",
             "/app/manifest.webmanifest": "manifest.webmanifest",
             "/app/data/board.json": "data/board.json",

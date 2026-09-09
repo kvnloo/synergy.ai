@@ -2,6 +2,7 @@ import { articles } from "./content.js";
 import { setupSynCompanion } from "./companion-bot.js";
 import { setupBoard } from "./board.js";
 import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall, scoreExplanation, shuffleSteps } from "./recall.js";
+import { diversityStats, renderSeminarMarkup, escapeHtml } from "./perspectives.js";
 import {
   findVerifyTask,
   buildVerificationComment,
@@ -61,6 +62,7 @@ const readerTitle = document.querySelector("#reader-title");
 const readerBody = document.querySelector("#reader-body");
 const causalChain = document.querySelector("#causal-chain");
 const evidenceList = document.querySelector("#evidence-list");
+const sourceSeminar = document.querySelector("#source-seminar");
 const evidenceCount = document.querySelector("#evidence-count");
 const evidenceDrawer = document.querySelector("#evidence-drawer");
 const evidenceReview = document.querySelector("#evidence-review");
@@ -364,8 +366,12 @@ function renderDispatches() {
 }
 
 function renderStories() {
-  storyGrid.innerHTML = storyArticles.map((article) => `
-    <article class="story-card searchable" data-topic="${article.topic}" data-search="${article.label} ${article.title} ${article.summary}">
+  storyGrid.innerHTML = storyArticles.map((article) => {
+    const div = diversityStats(article);
+    const multiClass = div.multi ? " is-multi-source" : "";
+    const diversity = `${div.lenses} lenses · ${div.sources} sources · ${div.quoted} quoted`;
+    return `
+    <article class="story-card searchable${multiClass}" data-topic="${article.topic}" data-search="${article.label} ${article.title} ${article.summary}">
       <a class="story-card-visual visual-${article.visual} article-link" href="#story-reader" data-article="${article.id}" aria-label="Open evidence briefing for ${article.title}">
         <span class="visual-label">Evidence brief / ${article.label}</span>
         <span class="visual-word">${article.visualWord}</span>
@@ -373,9 +379,10 @@ function renderStories() {
       <div class="story-meta"><span>${article.label}</span><span>${article.readTime}</span></div>
       <h3><a class="article-link" href="#story-reader" data-article="${article.id}">${article.title}</a></h3>
       <p>${article.summary}</p>
-      <a class="story-source article-link" href="#story-reader" data-article="${article.id}">Open five-part briefing →</a>
-    </article>
-  `).join("");
+      <span class="story-diversity">${diversity}${div.thinSlides ? ` · ${div.thinSlides} thin slides` : ""}</span>
+      <a class="story-source article-link" href="#story-reader" data-article="${article.id}">Open source seminar →</a>
+    </article>`;
+  }).join("");
 }
 
 function itemMatches(item) {
@@ -1089,13 +1096,18 @@ function renderReaderSlide() {
   causalChain.innerHTML = slide.chain.map((step, index) => `
     <li><span>${String(index + 1).padStart(2, "0")}</span><p>${step}</p></li>
   `).join("");
+  if (sourceSeminar) {
+    const seminar = renderSeminarMarkup(slide, currentArticle, { startIndex: 0 });
+    sourceSeminar.innerHTML = seminar.markup;
+  }
   evidenceList.innerHTML = slide.sources.map((source, index) => evidenceMarkup(source, index)).join("");
   if (verifyForm && !verifyForm.hidden) {
     verifyForm.hidden = true;
     evidenceDrawer.append(verifyForm);
   }
   readerCard.scrollTop = 0;
-  evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"}`;
+  const lensN = new Set(slide.sources.map((s) => (s.lens || s.relation))).size;
+  evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"} · ${lensN} lens${lensN === 1 ? "" : "es"}`;
   evidenceDrawer.open = false;
   evidenceReview.innerHTML = `Reviewed ${currentArticle.reviewed} · <button type="button" id="flag-problem">Flag a problem</button>`;
   readerPrime.hidden = currentSlideIndex !== 0;
@@ -2175,6 +2187,12 @@ renderStories();
 applyFilters();
 setupSectionReveals();
 setupWhiteboard();
+
+sourceSeminar?.addEventListener("click", (event) => {
+  const button = event.target.closest(".evidence-verify");
+  if (!button) return;
+  openVerifyForm(Number(button.dataset.source));
+});
 
 evidenceList.addEventListener("click", (event) => {
   const button = event.target.closest(".evidence-verify");

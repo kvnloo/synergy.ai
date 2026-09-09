@@ -1,4 +1,4 @@
-const VERSION = "2026-09-09-c3";
+const VERSION = "2026-09-09-seminar";
 const CACHE = `synergy-${VERSION}`;
 const SHELL = [
   "./",
@@ -9,7 +9,7 @@ const SHELL = [
   "./content.js",
   "./companion-bot.js",
   "./recall.js",
-  "./trust.js",
+  "./trust.js", "./perspectives.js",
   "./favicon.svg",
   "./manifest.webmanifest"
 ];
