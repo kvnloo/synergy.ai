@@ -13,10 +13,11 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from . import __version__
-from .adapters import ADAPTERS, AdapterError, AuthJobManager
+from .adapters import ADAPTERS, AdapterError, JobManager, sanitize_output
+from .loop import DEFAULT_MAX_MINUTES, WORK_ROOT, claim, identity, run, verify
 from .vault import EncryptedVault, VaultError
 
-MAX_REQUEST_BYTES = 64 * 1024
+MAX_REQUEST_BYTES = 256 * 1024
 
 
 class CompanionServer(ThreadingHTTPServer):
@@ -29,12 +30,18 @@ class CompanionServer(ThreadingHTTPServer):
         vault: EncryptedVault,
         allowed_origins: set[str],
         site_root: Path | None = None,
+        loop_config: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(address, CompanionHandler)
         self.vault = vault
         self.allowed_origins = allowed_origins
-        self.jobs = AuthJobManager()
+        self.jobs = JobManager()
         self.site_root = site_root
+        self.loop_config = {
+            "max_minutes": DEFAULT_MAX_MINUTES,
+            "work_root": WORK_ROOT,
+            **(loop_config or {}),
+        }
 
 
 class CompanionHandler(BaseHTTPRequestHandler):
@@ -139,6 +146,9 @@ class CompanionHandler(BaseHTTPRequestHandler):
             "/app/content.js": "content.js",
             "/app/styles.css": "styles.css",
             "/app/favicon.svg": "favicon.svg",
+            "/app/companion-bot.js": "companion-bot.js",
+            "/app/board.js": "board.js",
+            "/app/data/board.json": "data/board.json",
         }
         relative = files.get(path)
         if not relative:
@@ -173,6 +183,14 @@ class CompanionHandler(BaseHTTPRequestHandler):
             return
         if not self._guard():
             return
+        if path == "/v1/loop/identity":
+            try:
+                payload = identity()
+                payload["busy"] = self.server.jobs.busy
+                self._json(HTTPStatus.OK, payload)
+            except (AdapterError, subprocess.SubprocessError) as error:
+                self._error(HTTPStatus.BAD_GATEWAY, sanitize_output(str(error)))
+            return
 
         if path == "/v1/adapters":
             self._json(HTTPStatus.OK, [adapter.descriptor() for adapter in ADAPTERS.values()])
@@ -191,7 +209,7 @@ class CompanionHandler(BaseHTTPRequestHandler):
         if path.startswith("/v1/jobs/"):
             job = self.server.jobs.get(path.rsplit("/", 1)[-1])
             if not job:
-                self._error(HTTPStatus.NOT_FOUND, "Authentication job not found.")
+                self._error(HTTPStatus.NOT_FOUND, "Job not found.")
                 return
             self._json(HTTPStatus.OK, job.public())
             return
@@ -247,13 +265,59 @@ class CompanionHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if not self._guard():
             return
+        if path.startswith("/v1/jobs/") and path.endswith("/cancel"):
+            parts = path.strip("/").split("/")
+            job_id = parts[2] if len(parts) == 4 else ""
+            if not self.server.jobs.get(job_id):
+                self._error(HTTPStatus.NOT_FOUND, "Job not found.")
+            elif self.server.jobs.cancel(job_id):
+                self._json(HTTPStatus.OK, {"cancelled": True})
+            else:
+                self._error(HTTPStatus.CONFLICT, "Job is not running.")
+            return
         try:
             payload = self._read_json()
             if path == "/v1/auth/start":
-                job = self.server.jobs.start(
+                job = self.server.jobs.start_auth(
                     str(payload.get("adapter") or ""),
                     str(payload.get("provider") or ""),
                 )
+                self._json(HTTPStatus.ACCEPTED, job.public())
+                return
+            if path in {"/v1/loop/claim", "/v1/loop/run", "/v1/loop/verify"}:
+                if self.server.jobs.busy:
+                    self._error(HTTPStatus.CONFLICT, "A loop job is already running.")
+                    return
+                if path.endswith("/claim"):
+                    issue = payload.get("issue")
+                    scope = str(payload.get("scope") or "")
+                    harness = str(payload.get("harness") or "")
+                    hours = payload.get("hours", 72)
+                    job = self.server.jobs.start_loop(
+                        "claim", lambda current: claim(current, issue, scope, harness, hours)
+                    )
+                elif path.endswith("/run"):
+                    issue = payload.get("issue")
+                    harness = str(payload.get("harness") or "")
+                    task_markdown = str(payload.get("task_markdown") or "")
+                    if not task_markdown:
+                        raise ValueError("Task markdown is required.")
+                    max_minutes = payload.get("max_minutes", self.server.loop_config["max_minutes"])
+                    work_root = Path(self.server.loop_config["work_root"])
+                    job = self.server.jobs.start_loop(
+                        "run",
+                        lambda current: run(
+                            current, issue, harness, task_markdown, max_minutes, work_root=work_root
+                        ),
+                    )
+                else:
+                    pr_number = payload.get("pr")
+                    harness = str(payload.get("harness") or "")
+                    work_root = Path(self.server.loop_config["work_root"])
+                    job = self.server.jobs.start_loop(
+                        "verify",
+                        lambda current: verify(current, pr_number, harness, work_root=work_root),
+                    )
                 self._json(HTTPStatus.ACCEPTED, job.public())
                 return
             if path == "/v1/credentials":
@@ -267,8 +331,13 @@ class CompanionHandler(BaseHTTPRequestHandler):
             if path == "/v1/chat/completions":
                 self._proxy_openrouter(payload)
                 return
-        except (ValueError, VaultError, AdapterError) as error:
+        except (ValueError, VaultError) as error:
             self._error(HTTPStatus.BAD_REQUEST, str(error))
+            return
+        except AdapterError as error:
+            message = sanitize_output(str(error))
+            status = HTTPStatus.CONFLICT if message == "A loop job is already running." else HTTPStatus.BAD_GATEWAY
+            self._error(status, message)
             return
         self._error(HTTPStatus.NOT_FOUND, "Route not found.")
 
@@ -286,8 +355,14 @@ class CompanionHandler(BaseHTTPRequestHandler):
         self._error(HTTPStatus.NOT_FOUND, "Route not found.")
 
 
-def serve(vault: EncryptedVault, origins: set[str], port: int, site_root: Path | None = None) -> None:
-    server = CompanionServer(("127.0.0.1", port), vault, origins, site_root)
+def serve(
+    vault: EncryptedVault,
+    origins: set[str],
+    port: int,
+    site_root: Path | None = None,
+    loop_config: dict[str, Any] | None = None,
+) -> None:
+    server = CompanionServer(("127.0.0.1", port), vault, origins, site_root, loop_config)
     print(f"Synergy Local Companion listening on http://127.0.0.1:{port}")
     if site_root:
         print(f"Local reader: http://127.0.0.1:{port}/app/")

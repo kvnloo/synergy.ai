@@ -8,6 +8,7 @@ from pathlib import Path
 
 from platformdirs import user_data_path
 
+from .loop import DEFAULT_MAX_MINUTES, WORK_ROOT, identity
 from .server import serve
 from .vault import EncryptedVault, VaultError
 
@@ -39,6 +40,13 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--rotate-pairing", action="store_true")
     result.add_argument("--show-pairing", action="store_true")
+    result.add_argument("--max-minutes", type=int, default=DEFAULT_MAX_MINUTES)
+    result.add_argument(
+        "--work-root",
+        type=Path,
+        default=WORK_ROOT,
+        help="Directory for isolated task workspaces.",
+    )
     result.add_argument(
         "--site-root",
         type=Path,
@@ -64,6 +72,8 @@ def main() -> None:
     args = parser().parse_args()
     if not 1024 <= args.port <= 65535:
         raise SystemExit("Port must be between 1024 and 65535.")
+    if args.max_minutes < 1:
+        raise SystemExit("Maximum run time must be at least one minute.")
     origins = DEFAULT_ORIGINS | {origin.rstrip("/") for origin in args.origin if origin}
     try:
         vault = open_vault(args.vault)
@@ -79,11 +89,23 @@ def main() -> None:
         print(vault.pairing_token)
         return
 
+    worker = identity()
+    login = worker["login"] or "not signed in"
+    installed = ", ".join(item["id"] for item in worker["harnesses"] if item["installed"]) or "none"
+    print(f"Worker: gh {login} · harnesses: {installed}")
+    if not worker["authenticated"]:
+        print("Run: gh auth login")
     site_root = args.site_root.expanduser().resolve()
     if not (site_root / "index.html").is_file():
         print("Warning: static site assets were not found; /app/ is unavailable.", file=sys.stderr)
         site_root = None
-    serve(vault, origins, args.port, site_root)
+    serve(
+        vault,
+        origins,
+        args.port,
+        site_root,
+        {"max_minutes": args.max_minutes, "work_root": args.work_root.expanduser().resolve()},
+    )
 
 
 if __name__ == "__main__":

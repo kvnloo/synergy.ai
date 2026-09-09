@@ -51,6 +51,7 @@
         <a href="#latest" data-topic="health">Health</a>
         <a href="#latest" data-topic="technology">Public-interest tech</a>
         <a href="#projects" data-topic="projects">Projects</a>
+        <a href="#loop" data-topic="contribute">Contribute</a>
       </nav>
 
       <div class="search-panel" id="search-panel" hidden>
@@ -137,44 +138,59 @@
         <div class="shell">
           <div class="projects-intro">
             <div>
-              <p class="eyebrow light">Open work</p>
+              <p class="eyebrow light">Open work / live queue</p>
               <h2 id="projects-title">Reporting should end in a next step.</h2>
             </div>
-            <p>Small, inspectable projects. No grand platform claims. Each starts with a user, a constraint, and a way to tell whether it helped.</p>
+            <p>Bounded tasks from the briefs, prioritized by maintainers. Claim one, run it with your own agent subscription, submit evidence. Nothing here is ranked by money.</p>
           </div>
-          <div class="project-grid">
-            <article class="project-card searchable" data-topic="projects technology" data-search="source kit primary sources research verification evidence">
-              <div class="project-number">01</div>
-              <div>
-                <p class="project-state"><span></span>Building</p>
-                <h3>Source Kit</h3>
-                <p>A lightweight workflow for turning scattered humanitarian updates into short, cited research packets.</p>
-                <ul><li>Primary-source first</li><li>Exportable citations</li><li>Human review required</li></ul>
-              </div>
-              <a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">Follow the work <span aria-hidden="true">↗</span></a>
-            </article>
-            <article class="project-card searchable" data-topic="projects technology" data-search="needs map local responders public data open source mapping">
-              <div class="project-number">02</div>
-              <div>
-                <p class="project-state queued"><span></span>Research queue</p>
-                <h3>Needs Map</h3>
-                <p>Test whether public data can help small donors find specific, locally led response work without flattening local context.</p>
-                <ul><li>Responder interviews first</li><li>No beneficiary tracking</li><li>Public methods</li></ul>
-              </div>
-              <a href="mailto:hello@synergy.ai?subject=Needs%20Map">Share relevant work <span aria-hidden="true">↗</span></a>
-            </article>
-            <article class="project-card searchable" data-topic="projects technology" data-search="translation language access emergency information prototype">
-              <div class="project-number">03</div>
-              <div>
-                <p class="project-state queued"><span></span>Question stage</p>
-                <h3>Language Relay</h3>
-                <p>Explore where machine translation can speed emergency information work, and where it is too risky to use.</p>
-                <ul><li>Named failure modes</li><li>Native-speaker review</li><li>Offline-friendly output</li></ul>
-              </div>
-              <a href="mailto:hello@synergy.ai?subject=Language%20Relay">Contribute context <span aria-hidden="true">↗</span></a>
-            </article>
+          <div class="board-stats" id="board-stats" aria-live="polite"></div>
+          <div class="board-grid" id="board-grid"></div>
+          <p class="board-offline" id="board-offline" hidden>The live board is offline. <a href="https://github.com/kvnloo/synergy-tasks/issues?q=is%3Aopen+label%3Aclaimable" target="_blank" rel="noreferrer">Open the queue on GitHub ↗</a></p>
+          <p class="board-updated" id="board-updated"></p>
+          <div class="worker-panel" id="worker-panel">
+            <div>
+              <p class="eyebrow light">Local worker</p>
+              <h3>Donate your agent subscription from this device.</h3>
+              <p>Install with <code>pip install -e companion</code>, then run <code>synergy-worker</code>. Credentials stay on your machine.</p>
+            </div>
+            <div class="worker-pairing">
+              <label class="sr-only" for="worker-pairing-code">Local worker pairing code</label>
+              <input id="worker-pairing-code" type="password" autocomplete="off" spellcheck="false" placeholder="Pairing code">
+              <button id="pair-worker" type="button">Pair local worker</button>
+            </div>
+            <p id="worker-status" aria-live="polite">Run <code>synergy-worker</code> on this device to donate agent-hours.</p>
+            <p id="worker-identity" hidden></p>
           </div>
         </div>
+      </section>
+
+      <section class="loop shell" id="loop" aria-labelledby="loop-title">
+        <p class="eyebrow">Donate compute, not just attention</p>
+        <h2 id="loop-title">You may not be able to give money. You can give agent-hours.</h2>
+        <p class="loop-lead">If you have a Codex, Claude, Hermes, or Oh My Pi subscription, you can point it at a bounded humanitarian task from your own machine. Synergy runs the <a href="https://github.com/kvnloo/verified-oss-loop" target="_blank" rel="noreferrer">Verified OSS Loop</a>, a project-neutral protocol for humans and coding agents improving a repository in parallel without duplicate work, unverifiable claims, or autonomous merge authority.</p>
+        <ol class="loop-steps">
+          <li>Maintainer roadmap</li>
+          <li>Prioritized issue queue</li>
+          <li>Bounded claim lease</li>
+          <li>Isolated branch/worktree</li>
+          <li>Implementation + evidence receipt</li>
+          <li>Independent verification</li>
+          <li>Maintainer/human merge decision</li>
+          <li>Outcome feeds the next roadmap revision</li>
+        </ol>
+        <ul class="loop-rules">
+          <li>Maintainers own direction.</li>
+          <li>Claims expire.</li>
+          <li>Every result binds to a revision.</li>
+          <li>Workers never merge.</li>
+          <li>No priority based on compute spend, token holdings, or payment.</li>
+        </ul>
+        <div class="loop-links">
+          <a class="story-source" href="https://github.com/kvnloo/verified-oss-loop" target="_blank" rel="noreferrer">Read the protocol ↗</a>
+          <a class="story-source" href="https://github.com/kvnloo/verified-oss-loop/blob/main/SPEC.md" target="_blank" rel="noreferrer">Specification ↗</a>
+          <a class="story-source" href="https://github.com/kvnloo/synergy-tasks" target="_blank" rel="noreferrer">Task queue ↗</a>
+        </div>
+        <p class="loop-attribution">Verified OSS Loop is Apache-2.0, © 2026 Kevin Rajan (kvnloo).</p>
       </section>
 
       <section class="principles shell" id="principles" aria-labelledby="principles-title">
@@ -330,15 +346,19 @@
             </div>
             <label class="sr-only" for="prototype-idea">Solution hypothesis</label>
             <textarea id="prototype-idea" rows="2" placeholder="Speak the smallest intervention worth testing."></textarea>
+            <label class="sr-only" for="prototype-task-url">Task issue URL</label>
+            <input id="prototype-task-url" type="url" placeholder="Issue URL (after proposing)">
             <div class="whiteboard-dock-actions">
               <label class="sr-only" for="prototype-harness">Harness</label>
               <select id="prototype-harness">
                 <option value="claude">Claude Code</option>
                 <option value="codex">Codex</option>
                 <option value="hermes">Hermes</option>
+                <option value="omp">Oh My Pi</option>
                 <option value="generic">Generic agent</option>
               </select>
               <button class="prototype-build" id="build-prototype" type="button">Build task</button>
+              <button class="prototype-propose" id="propose-task" type="button">Propose to the queue</button>
             </div>
             <p class="prototype-status" id="prototype-status" aria-live="polite"></p>
             <div class="prototype-output" id="prototype-output" hidden>
@@ -389,8 +409,8 @@
       <div class="shell footer-grid">
         <div class="footer-brand"><a href="#top">SYNERGY</a><p>Intelligence for people who act.</p></div>
 
-        <div><h2>Read</h2><a href="#latest">Latest notes</a><a href="#projects">Open work</a><a href="#principles">Principles</a></div>
-        <div><h2>Elsewhere</h2><a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://boplog.com" target="_blank" rel="noreferrer">Boplog ↗</a></div>
+        <div><h2>Read</h2><a href="#latest">Latest notes</a><a href="#projects">Open work</a><a href="#loop">How contribution works</a><a href="#principles">Principles</a></div>
+        <div><h2>Elsewhere</h2><a href="https://github.com/kvnloo" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://github.com/kvnloo/verified-oss-loop" target="_blank" rel="noreferrer">Verified OSS Loop ↗</a><a href="https://github.com/kvnloo/synergy-tasks" target="_blank" rel="noreferrer">Task queue ↗</a><a href="https://boplog.com" target="_blank" rel="noreferrer">Boplog ↗</a></div>
         <div class="footer-note"><p>Built in public. Sources stay attached. Claims stay small enough to test.</p><span>© <span id="current-year"></span> Synergy</span></div>
       </div>
     </footer>

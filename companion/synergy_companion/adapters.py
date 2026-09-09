@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -8,7 +9,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 MAX_JOB_OUTPUT = 24_000
 SECRET_PATTERNS = (
@@ -166,19 +167,23 @@ ADAPTERS: dict[str, ProviderAdapter] = {
 
 
 @dataclass
-class AuthJob:
+class Job:
     id: str
-    adapter: str
-    provider: str
+    adapter: str = ""
+    provider: str = ""
+    kind: str = "auth"
     status: str = "pending"
     output: str = ""
     returncode: int | None = None
     created_at: float = field(default_factory=time.time)
     completed_at: float | None = None
+    result: dict[str, Any] | None = None
+    process: subprocess.Popen[str] | None = field(default=None, repr=False)
 
     def public(self) -> dict[str, Any]:
         return {
             "id": self.id,
+            "kind": self.kind,
             "adapter": self.adapter,
             "provider": self.provider,
             "status": self.status,
@@ -186,32 +191,70 @@ class AuthJob:
             "returncode": self.returncode,
             "created_at": self.created_at,
             "completed_at": self.completed_at,
+            "result": self.result,
         }
 
 
-class AuthJobManager:
+class JobManager:
     def __init__(self) -> None:
-        self._jobs: dict[str, AuthJob] = {}
+        self._jobs: dict[str, Job] = {}
         self._lock = threading.RLock()
 
-    def start(self, adapter_id: str, provider: str) -> AuthJob:
+    @property
+    def busy(self) -> bool:
+        with self._lock:
+            return any(
+                job.kind in {"claim", "run", "verify"} and job.status in {"pending", "running"}
+                for job in self._jobs.values()
+            )
+
+    def start_auth(self, adapter_id: str, provider: str) -> Job:
         adapter = ADAPTERS.get(adapter_id)
         if not adapter:
             raise AdapterError("Unknown provider adapter.")
         if not adapter.installed:
             raise AdapterError(f"{adapter.label} is not installed on this device.")
         command = adapter.auth_command(provider)
-        job = AuthJob(id=uuid.uuid4().hex, adapter=adapter_id, provider=provider)
-        with self._lock:
-            self._jobs[job.id] = job
-        threading.Thread(target=self._run, args=(job, command), daemon=True).start()
+        job = Job(id=uuid.uuid4().hex, adapter=adapter_id, provider=provider)
+        self._store(job)
+        threading.Thread(target=self._run_auth, args=(job, command), daemon=True).start()
         return job
 
-    def get(self, job_id: str) -> AuthJob | None:
+
+    def start_loop(self, kind: str, runner: Callable[[Job], dict[str, Any]]) -> Job:
+        if kind not in {"claim", "run", "verify"}:
+            raise ValueError("Unknown loop job kind.")
+        with self._lock:
+            if self.busy:
+                raise AdapterError("A loop job is already running.")
+            job = Job(id=uuid.uuid4().hex, kind=kind)
+            self._jobs[job.id] = job
+        threading.Thread(target=self._run_loop, args=(job, runner), daemon=True).start()
+        return job
+
+    def _store(self, job: Job) -> None:
+        with self._lock:
+            self._jobs[job.id] = job
+
+    def get(self, job_id: str) -> Job | None:
         with self._lock:
             return self._jobs.get(job_id)
 
-    def _run(self, job: AuthJob, command: list[str]) -> None:
+    def cancel(self, job_id: str) -> bool:
+        job = self.get(job_id)
+        if not job or job.status not in {"pending", "running"}:
+            return False
+        process = job.process
+        if process and process.poll() is None:
+            os.killpg(os.getpgid(process.pid), 15)
+        job.status = "cancelled"
+        job.returncode = -15
+        job.completed_at = time.time()
+        return True
+
+    def _run_auth(self, job: Job, command: list[str]) -> None:
+        if job.status == "cancelled":
+            return
         job.status = "running"
         try:
             process = subprocess.Popen(
@@ -222,16 +265,39 @@ class AuthJobManager:
                 text=True,
                 start_new_session=True,
             )
+            job.process = process
             output = ""
             assert process.stdout is not None
             for line in process.stdout:
                 output = (output + line)[-(MAX_JOB_OUTPUT * 2):]
                 job.output = sanitize_output(output)
             job.returncode = process.wait()
-            job.status = "completed" if job.returncode == 0 else "failed"
-        except Exception as error:  # subprocess boundary
+            if job.status != "cancelled":
+                job.status = "completed" if job.returncode == 0 else "failed"
+        except Exception as error:
             job.output = sanitize_output(str(error))
             job.returncode = -1
             job.status = "failed"
         finally:
-            job.completed_at = time.time()
+            job.process = None
+            job.completed_at = job.completed_at or time.time()
+
+    def _run_loop(self, job: Job, runner: Callable[[Job], dict[str, Any]]) -> None:
+        if job.status == "cancelled":
+            return
+        job.status = "running"
+        try:
+            job.result = runner(job)
+            job.returncode = 0
+            if job.status != "cancelled":
+                job.status = "completed"
+        except Exception as error:
+            job.output = sanitize_output(str(error))
+            job.returncode = -1
+            if job.status != "cancelled":
+                job.status = "failed"
+        finally:
+            job.process = None
+            job.completed_at = job.completed_at or time.time()
+
+

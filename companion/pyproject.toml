@@ -12,10 +12,12 @@ dependencies = [
   "cryptography>=44,<47",
   "keyring>=25,<27",
   "platformdirs>=4,<5",
+  "pyyaml>=6.0,<7",
 ]
 
 [project.scripts]
 synergy-companion = "synergy_companion.__main__:main"
+synergy-worker = "synergy_companion.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["synergy_companion"]

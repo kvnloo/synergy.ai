@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from synergy_companion.server import CompanionServer
+from synergy_companion.adapters import Job
 from synergy_companion.vault import EncryptedVault, VaultError
 
 
@@ -109,6 +110,18 @@ class CompanionServerTests(unittest.TestCase):
         self.assertEqual(captured["timeout"], 90)
         self.assertNotIn("sk-provider-secret", json.dumps(payload))
 
+    def test_jobs_busy_returns_409(self):
+        busy_job = Job("busy", kind="run", status="running")
+        self.server.jobs._jobs[busy_job.id] = busy_job
+        status, _, payload = self.request(
+            "POST",
+            "/v1/loop/claim",
+            token=self.vault.pairing_token,
+            payload={"issue": 1, "scope": "A bounded task", "harness": "manual", "hours": 72},
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(payload, {"error": "A loop job is already running."})
+
 
     def test_local_reader_is_served_without_cross_origin_fetch(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
@@ -136,6 +149,16 @@ class CompanionServerTests(unittest.TestCase):
         connection.close()
         self.assertEqual(response.status, 200)
         self.assertEqual(payload, [])
+    def test_app_serves_companion_bot_js(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request("GET", "/app/companion-bot.js")
+        response = connection.getresponse()
+        body = response.read().decode()
+        connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertIn("javascript", response.getheader("Content-Type"))
+        self.assertTrue(body)
+
 
 if __name__ == "__main__":
     unittest.main()
