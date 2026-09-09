@@ -1,0 +1,90 @@
+name: Quality gate
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-property:
+    name: Unit + property + check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Syntax + briefs export + unit + property
+        run: npm test
+
+  companion-python:
+    name: Companion server tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install companion package
+        working-directory: companion
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -e .
+      - name: Unittest
+        working-directory: companion
+        run: .venv/bin/python -m unittest discover -s tests -q
+
+  smoke-ui:
+    name: Headless UI smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Install Chrome for Testing
+        run: npx @puppeteer/browsers install chrome@stable
+      - name: Smoke UI
+        run: |
+          CHROME=$(find "$HOME/.cache/puppeteer" -type f -name chrome -path "*chrome-linux*" 2>/dev/null | head -1)
+          if [ -z "$CHROME" ]; then
+            CHROME=$(find /home/runner -type f -name chrome 2>/dev/null | head -1)
+          fi
+          echo "Using $CHROME"
+          CHROME="$CHROME" npm run test:smoke
+
+  mutation:
+    name: Mutation testing (Stryker)
+    runs-on: ubuntu-latest
+    needs: [unit-property]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Stryker
+        run: npm run test:mutation
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          if-no-files-found: ignore

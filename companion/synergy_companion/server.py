@@ -148,6 +148,7 @@ class CompanionHandler(BaseHTTPRequestHandler):
             "/app/styles.css": "styles.css",
             "/app/favicon.svg": "favicon.svg",
             "/app/companion-bot.js": "companion-bot.js",
+            "/app/companion-physics.js": "companion-physics.js",
             "/app/board.js": "board.js",
             "/app/recall.js": "recall.js",
             "/app/trust.js": "trust.js",

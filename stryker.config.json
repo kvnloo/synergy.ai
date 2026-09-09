@@ -1,0 +1,44 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "node --test test/unit/physics.test.js test/unit/recall.test.js test/unit/trust.test.js test/property/physics.prop.test.js test/property/recall.prop.test.js"
+  },
+  "mutate": [
+    "companion-physics.js",
+    "recall.js",
+    "trust.js"
+  ],
+  "ignorePatterns": [
+    "companion/**",
+    "data/**",
+    "icons/**",
+    "node_modules/**",
+    "reports/**",
+    ".stryker-tmp/**",
+    ".agents/**",
+    ".git/**",
+    ".omp/**",
+    "**/.venv/**",
+    ".venv/**"
+  ],
+  "inPlace": true,
+  "coverageAnalysis": "off",
+  "timeoutMS": 15000,
+  "concurrency": 2,
+  "reporters": ["clear-text", "progress", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 65,
+    "break": 55
+  },
+  "incremental": false,
+  "dryRunTimeoutMinutes": 5
+}

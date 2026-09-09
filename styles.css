@@ -637,8 +637,12 @@ summary {
 .reader-stage {
   position: relative;
   isolation: isolate;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 100dvh;
   padding: 20px 34px 16px;
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
   display: grid;
   grid-template-rows: 50px minmax(0, 1fr) 28px;
   overflow: hidden;
@@ -753,6 +757,7 @@ summary {
   left: -175px;
   width: min(500px, calc(100vw - 150px));
   height: min(790px, calc(100dvh - 125px));
+  min-height: 0;
   padding: 27px 28px 24px;
   display: flex;
   flex-direction: column;
@@ -760,7 +765,11 @@ summary {
   background: var(--paper);
   border-top: 8px solid var(--orange);
   box-shadow: 0 28px 90px rgba(0,0,0,.38);
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-width: thin;
   scrollbar-color: var(--orange) transparent;
 }
@@ -1187,7 +1196,9 @@ summary {
 
 @media (max-width: 700px) {
   .reader-stage {
-    padding: 10px 0 0;
+    padding: 0;
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     grid-template-rows: 45px minmax(0, 1fr) 34px;
   }
   .reader-header {
@@ -1201,8 +1212,21 @@ summary {
   .reader-card {
     width: 100%;
     height: 100%;
-    padding: 21px 20px 20px;
+    max-height: 100%;
+    min-height: 0;
+    align-self: stretch;
+    justify-self: stretch;
+    left: 0;
+    padding: 21px 20px max(20px, env(safe-area-inset-bottom, 0px));
     box-shadow: none;
+    overflow-y: auto;
+  }
+  .reader-copy,
+  .source-seminar,
+  .evidence-drawer,
+  .recall-drawer,
+  .ai-drawer {
+    min-width: 0;
   }
   .reader-copy { padding: 24px 0 21px; }
   .reader-card h2 { font-size: clamp(34px, 10vw, 44px); }
@@ -1695,7 +1719,6 @@ select:focus {
   transition:
     border-color var(--motion-base) var(--ease-out-quart),
     box-shadow var(--motion-base) var(--ease-out-quart);
-  contain: layout paint;
 }
 
 .prototype-board {
@@ -2162,9 +2185,10 @@ select:focus {
   margin: 0 0 4px;
   padding: 3px 6px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--ink-soft);
   font: 500 8px/1 var(--mono);
+  letter-spacing: .06em;
   text-transform: uppercase;
   letter-spacing: .04em;
 }
@@ -2525,4 +2549,59 @@ body.is-done-today #done-today {
     width: 100%;
   }
   .seminar-head { align-items: start; }
+}
+
+/* Companion gesture micro-interactions */
+.syn-companion.is-holding .syn-buddy {
+  scale: 0.92;
+  filter: drop-shadow(0 6px 12px rgba(20, 19, 18, .22));
+  transition-duration: 220ms;
+}
+.syn-companion.is-pinching .syn-buddy {
+  transition-duration: 80ms;
+}
+.syn-companion[data-gesture="double"] .syn-buddy {
+  animation: syn-gesture-pop 420ms var(--ease-out-quart);
+}
+.syn-companion[data-gesture="triple"] .syn-buddy {
+  animation: syn-gesture-spin 640ms var(--ease-out-quart);
+}
+.syn-companion[data-gesture="expand"] .syn-buddy {
+  animation: syn-gesture-expand 480ms var(--ease-out-quart);
+}
+.syn-companion[data-gesture="pinch"] .syn-buddy {
+  animation: syn-gesture-pinch 420ms var(--ease-out-quart);
+}
+@keyframes syn-gesture-pop {
+  0% { scale: 1; }
+  35% { scale: 1.14; }
+  100% { scale: 1; }
+}
+@keyframes syn-gesture-spin {
+  0% { rotate: 0deg; scale: 1; }
+  40% { rotate: -12deg; scale: 1.08; }
+  70% { rotate: 10deg; scale: 1.06; }
+  100% { rotate: 0deg; scale: 1; }
+}
+@keyframes syn-gesture-expand {
+  0% { scale: 1; }
+  45% { scale: 1.22; }
+  100% { scale: 1.06; }
+}
+@keyframes syn-gesture-pinch {
+  0% { scale: 1; }
+  45% { scale: 0.78; }
+  100% { scale: 0.92; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .syn-companion[data-gesture] .syn-buddy { animation: none; }
+  .syn-companion.is-holding .syn-buddy { scale: 1; }
+}
+
+.syn-companion.is-coasting .syn-buddy {
+  filter: drop-shadow(0 14px 22px rgba(20, 19, 18, .32));
+}
+.syn-companion.is-dragging .syn-buddy,
+.syn-companion.is-coasting .syn-buddy {
+  will-change: filter, scale;
 }

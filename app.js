@@ -1131,6 +1131,24 @@ function renderReaderSlide() {
   recordCurrentSlide();
 }
 
+
+function setReaderThemeColor(open, theme) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  if (!open) {
+    meta.content = "#f3efe4";
+    return;
+  }
+  const map = {
+    climate: "#214a40",
+    technology: "#262650",
+    displacement: "#673719",
+    health: "#512523",
+    conflict: "#081425"
+  };
+  meta.content = map[theme] || "#081425";
+}
+
 function openArticle(articleId) {
   const article = articles.find((candidate) => candidate.id === articleId);
   if (!article) return;
@@ -1151,6 +1169,7 @@ function openArticle(articleId) {
   renderReaderSlide();
   reader.showModal();
   document.documentElement.classList.add("reader-open");
+  setReaderThemeColor(true, article?.visual || article?.topic);
   placeVoiceStatus();
   resetReaderProgress();
 }
@@ -1159,6 +1178,7 @@ function closeReader() {
   stopReadAloud();
   if (reader.open) reader.close();
   document.documentElement.classList.remove("reader-open");
+  setReaderThemeColor(false);
 }
 
 function setSlide(index) {
@@ -2120,6 +2140,7 @@ reader.addEventListener("close", () => {
   window.clearTimeout(readerInteractionTimer);
   readerInteractionPaused = false;
   document.documentElement.classList.remove("reader-open");
+  setReaderThemeColor(false);
   currentArticle = null;
   closePrototypeBoard();
   if (voiceTarget && reader.contains(voiceTarget)) stopVoiceDictation();
@@ -2336,6 +2357,7 @@ readerDone?.addEventListener("click", () => {
   stopReadAloud();
   reader.close();
   document.documentElement.classList.remove("reader-open");
+  setReaderThemeColor(false);
 });
 
 readAloudBtn?.addEventListener("click", () => {

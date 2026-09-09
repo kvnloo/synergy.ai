@@ -70,6 +70,7 @@ export function pickDailyClaim(articles, dayIndex = Math.floor(Date.now() / 8640
   return entries[dayIndex % entries.length];
 }
 
+// Stryker disable all: non-pure / DOM-adjacent surface
 export async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -78,3 +79,5 @@ export async function copyText(text) {
     return false;
   }
 }
+// Stryker restore all
+

@@ -6,15 +6,35 @@
  * Liveliness (loop noise wander, blink curve, breath) adapted from bloub (MIT)
  *   https://github.com/jeremy-prt/bloub
  *
- * Pet: fixed viewport seat, pointer-drag with capture, click-to-poke bubble
- * (no chat panel). Position persists in localStorage.
+ * Pet: fixed viewport seat, drag + flick inertia/pong bounce, jelly squash,
+ * multi-tap / hold / pinch gestures (no chat panel). Position in localStorage.
  *
  * CSP-safe ES module — no React / no motion package.
  */
 
+import {
+  FLICK_MIN_SPEED,
+  FLICK_MAX_SPEED,
+  COAST_FRICTION,
+  BOUNCE_RESTITUTION,
+  COAST_STOP_SPEED,
+  JELLY_MAX,
+  clamp,
+  seatBounds as computeSeatBounds,
+  clampSeat as clampSeatPoint,
+  velocityFromSamples as sampleVelocity,
+  shouldStartCoast,
+  stepCoast,
+  jellyTargets
+} from "./companion-physics.js";
+
 const EYE_POINTS = 12;
 const POS_KEY = "synergy.syn.pet.pos";
 const DRAG_THRESHOLD = 6;
+const HOLD_MS = 480;
+const TAP_GAP_MS = 340;
+const PINCH_EXPAND = 1.12;
+const PINCH_SHRINK = 0.88;
 const TAU = Math.PI * 2;
 
 function eye(x, y, width, height, rotation = 0, curve = 0.8, skew = 0, open = 1) {
@@ -67,15 +87,16 @@ const MOOD_LINES = {
   principles: ["Small claims. Real sources.", "Hold me to it."],
   voice: ["I'm all ears.", "Say it out loud."],
   poke: ["Boop.", "Still here.", "That tickled.", "Again?", "Ok ok — I'm awake."],
+  double: ["Double boop!", "Now we're talking.", "Pop!"],
+  triple: ["Triple! Spin time.", "Whoa whoa whoa.", "Chaos pet unlocked."],
+  hold: ["Mmm.", "Soft hold.", "Cozy.", "Don't let go yet."],
+  holdEnd: ["Ok.", "Back.", "Woke soft."],
+  expand: ["Bigger me.", "Expanding.", "Roomy."],
+  pinch: ["Tiny me.", "Shy mode.", "Compressed."],
   idle: ["…", "zzz", "Whenever."]
 };
 
 const POKE_EXPRESSIONS = ["happy", "cheeky", "wink", "surprised", "excited", "curious", "proud"];
-
-function clamp(n, a, b, fallback = a) {
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(b, Math.max(a, n));
-}
 
 function round(n) {
   return Number(n.toFixed(3));
@@ -291,6 +312,9 @@ export function setupSynCompanion(options = {}) {
 
   let seatX = 0;
   let seatY = 0;
+  let velX = 0;
+  let velY = 0;
+  let coasting = false;
   let dragging = false;
   let didDrag = false;
   let dragPointerId = null;
@@ -298,6 +322,20 @@ export function setupSynCompanion(options = {}) {
   let dragOffsetY = 0;
   let dragStartX = 0;
   let dragStartY = 0;
+  let dragSamples = [];
+  let bounceUntil = 0;
+  let bounceAxis = null;
+  const jelly = { sx: 1, sy: 1, vx: 0, vy: 0 };
+  const pointers = new Map();
+  let primaryId = null;
+  let holdTimer = 0;
+  let holding = false;
+  let pinching = false;
+  let pinchStartDist = 1;
+  let pinchLiveScale = 1;
+  let tapCount = 0;
+  let tapTimer = 0;
+  let gestureFlashTimer = 0;
 
   const gazeX = { x: 0, v: 0 };
   const gazeY = { x: 0, v: 0 };
@@ -326,15 +364,13 @@ export function setupSynCompanion(options = {}) {
     };
   }
 
-  function clampSeat(x, y) {
+  function seatBounds() {
     const { w, h } = petSize();
-    const p = pad();
-    const maxX = Math.max(p.x, window.innerWidth - w - p.r);
-    const maxY = Math.max(p.y, window.innerHeight - h - p.b);
-    return {
-      x: clamp(x, p.x, maxX, maxX),
-      y: clamp(y, p.y, maxY, maxY)
-    };
+    return computeSeatBounds(w, h, window.innerWidth, window.innerHeight, pad());
+  }
+
+  function clampSeat(x, y) {
+    return clampSeatPoint(x, y, seatBounds());
   }
 
   function updateEdge(x) {
@@ -346,22 +382,120 @@ export function setupSynCompanion(options = {}) {
     root.dataset.edge = edge;
   }
 
-  function applySeat(x, y, { save = false } = {}) {
-    const next = clampSeat(x, y);
-    seatX = next.x;
-    seatY = next.y;
+  function writeSeatDom() {
     root.style.left = `${seatX}px`;
     root.style.top = `${seatY}px`;
     root.style.right = "auto";
     root.style.bottom = "auto";
     updateEdge(seatX);
-    if (save) {
-      try {
-        localStorage.setItem(POS_KEY, JSON.stringify({ x: seatX, y: seatY }));
-      } catch {
-        /* ignore */
-      }
+  }
+
+  function saveSeat() {
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify({ x: seatX, y: seatY }));
+    } catch {
+      /* ignore */
     }
+  }
+
+  function applySeat(x, y, { save = false } = {}) {
+    const next = clampSeat(x, y);
+    seatX = next.x;
+    seatY = next.y;
+    writeSeatDom();
+    if (save) saveSeat();
+  }
+
+  function pushDragSample(clientX, clientY, now = performance.now()) {
+    dragSamples.push({ t: now, x: clientX, y: clientY });
+    if (dragSamples.length > 8) dragSamples.shift();
+  }
+
+  function velocityFromSamples() {
+    return sampleVelocity(dragSamples);
+  }
+
+  function stopCoast({ save = true } = {}) {
+    coasting = false;
+    velX = 0;
+    velY = 0;
+    root.classList.remove("is-coasting");
+    if (save) saveSeat();
+  }
+
+  function startCoast(vx, vy) {
+    if (!shouldStartCoast(vx, vy, { reducedMotion: reducedMq.matches })) {
+      stopCoast({ save: true });
+      return;
+    }
+    velX = vx;
+    velY = vy;
+    coasting = true;
+    root.classList.add("is-coasting");
+    awake = true;
+    root.dataset.awake = "1";
+    setExpression(pick(["excited", "surprised", "cheeky", "happy"]), { force: true });
+    sayLine(pick(["Weee!", "Pong mode.", "Don't stop me now.", "Bouncy.", "Catch me?"]), { hold: 1600 });
+  }
+
+  function bounceJelly(axis) {
+    bounceUntil = performance.now() + 280;
+    bounceAxis = axis;
+    hopUntil = bounceUntil;
+    reactionKind = "squash";
+    reactionUntil = bounceUntil;
+    setExpression(pick(["surprised", "excited", "cheeky", "alert"]), { force: true });
+  }
+
+  /** Integrate free motion + wall bounce (little pong pet). */
+  function stepPhysics(dt) {
+    if (!coasting || dragging || reducedMq.matches) return;
+    const next = stepCoast({
+      seatX,
+      seatY,
+      velX,
+      velY,
+      dt,
+      bounds: seatBounds()
+    });
+    seatX = next.seatX;
+    seatY = next.seatY;
+    velX = next.velX;
+    velY = next.velY;
+    if (next.hit) bounceJelly(next.hit);
+    writeSeatDom();
+    if (next.stopped) {
+      stopCoast({ save: true });
+      setExpression("proud", { force: true });
+      if (awake) sayLine(pick(["Parked.", "That was fun.", "Again?"]), { hold: 1400 });
+    }
+  }
+
+  function targetJelly(dt) {
+    // Live pinch drives jelly directly (no spring fight).
+    if (pinching) {
+      jelly.sx = pinchLiveScale;
+      jelly.sy = clamp(2 - pinchLiveScale, 0.7, 1.35, 1);
+      jelly.vx = 0;
+      jelly.vy = 0;
+      return;
+    }
+    const moving = (dragging || coasting) && !reducedMq.matches;
+    const bounceLive = performance.now() < bounceUntil ? bounceAxis : null;
+    const { sx: tx, sy: ty } = jellyTargets(
+      moving ? velX : 0,
+      moving ? velY : 0,
+      { holding, bounceAxis: bounceLive }
+    );
+    // Spring jelly toward target so it wobbles after impacts.
+    const k = 28;
+    const d = 0.72;
+    const fx = (tx - jelly.sx) * k - jelly.vx * (2 * Math.sqrt(k) * d);
+    const fy = (ty - jelly.sy) * k - jelly.vy * (2 * Math.sqrt(k) * d);
+    jelly.vx += fx * dt;
+    jelly.vy += fy * dt;
+    jelly.sx += jelly.vx * dt;
+    jelly.sy += jelly.vy * dt;
   }
 
   function defaultSeat() {
@@ -450,12 +584,116 @@ export function setupSynCompanion(options = {}) {
   }
 
   function poke() {
+    stopCoast({ save: true });
     awake = true;
     root.dataset.awake = "1";
     // In-place squash/bounce only — no seat rewrite, no layout hop.
     hopUntil = performance.now() + 320;
     setExpression(pick(POKE_EXPRESSIONS), { force: true });
     sayLine(pick(MOOD_LINES.poke), { hold: 2600 });
+  }
+
+  function flashGesture(name) {
+    root.dataset.gesture = name;
+    window.clearTimeout(gestureFlashTimer);
+    gestureFlashTimer = window.setTimeout(() => {
+      if (root.dataset.gesture === name) delete root.dataset.gesture;
+    }, 720);
+  }
+
+  function clearHoldTimer() {
+    if (holdTimer) {
+      window.clearTimeout(holdTimer);
+      holdTimer = 0;
+    }
+  }
+
+  function beginHold() {
+    // Prefer dragging flag over pointers.size — capture/cancel can desync the map.
+    if (holding || didDrag || pinching || !dragging) return;
+    holding = true;
+    root.classList.add("is-holding");
+    awake = true;
+    root.dataset.awake = "1";
+    setExpression("sleepy", { force: true });
+    sayLine(pick(MOOD_LINES.hold), { hold: 2200 });
+  }
+
+  function endHold() {
+    if (!holding) return;
+    holding = false;
+    root.classList.remove("is-holding");
+    setExpression("calm", { force: true });
+    if (awake) sayLine(pick(MOOD_LINES.holdEnd), { hold: 1400 });
+  }
+
+  function doubleTap() {
+    stopCoast({ save: true });
+    awake = true;
+    root.dataset.awake = "1";
+    flashGesture("double");
+    hopUntil = performance.now() + 420;
+    setExpression(pick(["excited", "happy", "surprised"]), { force: true });
+    sayLine(pick(MOOD_LINES.double), { hold: 2200 });
+  }
+
+  function tripleTap() {
+    stopCoast({ save: false });
+    awake = true;
+    root.dataset.awake = "1";
+    flashGesture("triple");
+    hopUntil = performance.now() + 640;
+    setExpression(pick(["cheeky", "excited", "confused"]), { force: true });
+    sayLine(pick(MOOD_LINES.triple), { hold: 2400 });
+    if (!reducedMq.matches) {
+      const ang = Math.random() * Math.PI * 2;
+      const speed = 900 + Math.random() * 700;
+      startCoast(Math.cos(ang) * speed, Math.sin(ang) * speed);
+    }
+  }
+
+  function resolveTaps() {
+    const n = tapCount;
+    tapCount = 0;
+    tapTimer = 0;
+    if (n >= 3) tripleTap();
+    else if (n === 2) doubleTap();
+    else poke();
+  }
+
+  function registerTap() {
+    tapCount += 1;
+    window.clearTimeout(tapTimer);
+    tapTimer = window.setTimeout(resolveTaps, TAP_GAP_MS);
+  }
+
+  function pointerPairDist() {
+    const pts = [...pointers.values()];
+    if (pts.length < 2) return 1;
+    return Math.max(1, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y));
+  }
+
+  function finishPinch() {
+    if (!pinching) return;
+    const scale = pinchLiveScale;
+    pinching = false;
+    root.classList.remove("is-pinching");
+    pinchLiveScale = 1;
+    awake = true;
+    root.dataset.awake = "1";
+    if (scale >= PINCH_EXPAND) {
+      flashGesture("expand");
+      hopUntil = performance.now() + 420;
+      setExpression(pick(["excited", "surprised", "proud"]), { force: true });
+      sayLine(pick(MOOD_LINES.expand), { hold: 2000 });
+    } else if (scale <= PINCH_SHRINK) {
+      flashGesture("pinch");
+      hopUntil = performance.now() + 360;
+      setExpression(pick(["shy", "worried", "calm"]), { force: true });
+      sayLine(pick(MOOD_LINES.pinch), { hold: 2000 });
+    } else {
+      setExpression("curious", { force: true });
+    }
   }
 
   function updateContextFromDom() {
@@ -517,6 +755,8 @@ export function setupSynCompanion(options = {}) {
     frame = requestAnimationFrame(tick);
     const dt = clamp((now - lastTs) / 1000, 0.001, 0.048, 0.016);
     lastTs = now;
+    stepPhysics(dt);
+    targetJelly(dt);
     const reduced = reducedMq.matches;
     const tSec = (now - bootMs) / 1000;
 
@@ -566,7 +806,10 @@ export function setupSynCompanion(options = {}) {
     let targetScale = life.breath;
     if (!reduced) {
       if (dragging) {
-        targetScale = 1.06;
+        targetScale = 1.04;
+        targetBob = -1;
+      } else if (coasting) {
+        targetScale = 1.03;
         targetBob = -2;
       } else if (now < hopUntil || (now < reactionUntil && reactionKind === "bounce")) {
         // Subtle hop inside the SVG — keep visual center stable.
@@ -621,8 +864,8 @@ export function setupSynCompanion(options = {}) {
       + (now < reactionUntil && reactionKind === "tilt" ? leanX.x * 2 : 0)
       + life.dRoll * 0.15;
     const bodyY = expr.body.y + leanY.x + bob.x;
-    const sx = expr.body.scaleX * scale.x * (1 + Math.abs(gazeX.x) * 0.03);
-    const sy = expr.body.scaleY * scale.x * (1 - Math.abs(gazeY.x) * 0.02);
+    const sx = expr.body.scaleX * scale.x * jelly.sx * (1 + Math.abs(gazeX.x) * 0.03);
+    const sy = expr.body.scaleY * scale.x * jelly.sy * (1 - Math.abs(gazeY.x) * 0.02);
 
     if (faceRoot) {
       faceRoot.setAttribute(
@@ -630,6 +873,11 @@ export function setupSynCompanion(options = {}) {
         `translate(100 ${100 + bodyY}) rotate(${bodyRotate.toFixed(2)}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-100 -100)`
       );
     }
+    if (buddy) {
+      buddy.style.setProperty("--syn-jelly-x", jelly.sx.toFixed(3));
+      buddy.style.setProperty("--syn-jelly-y", jelly.sy.toFixed(3));
+    }
+    root.classList.toggle("is-coasting", coasting);
 
     root.style.setProperty("--syn-gaze-x", gazeX.x.toFixed(3));
     root.style.setProperty("--syn-gaze-y", gazeY.x.toFixed(3));
@@ -649,71 +897,184 @@ export function setupSynCompanion(options = {}) {
 
   const dragSurface = buddy || root;
 
-  dragSurface.addEventListener("pointerdown", (event) => {
-    if (event.button != null && event.button !== 0) return;
-    // Offset from the buddy box, not the root (bubble must not affect drag origin).
+  function releasePointerCaptureSafe(id) {
+    if (id == null) return;
+    try {
+      if (dragSurface.hasPointerCapture?.(id)) dragSurface.releasePointerCapture(id);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function beginPrimaryDrag(event) {
     const rect = (buddy || root).getBoundingClientRect();
+    stopCoast({ save: false });
     dragging = true;
     didDrag = false;
+    primaryId = event.pointerId;
     dragPointerId = event.pointerId;
     dragOffsetX = event.clientX - rect.left;
     dragOffsetY = event.clientY - rect.top;
     dragStartX = event.clientX;
     dragStartY = event.clientY;
-    root.classList.add("is-dragging");
+    dragSamples = [];
+    pushDragSample(event.clientX, event.clientY);
+    clearHoldTimer();
+    holdTimer = window.setTimeout(beginHold, HOLD_MS);
     try {
       dragSurface.setPointerCapture(event.pointerId);
     } catch {
       /* ignore */
     }
+  }
+
+  function endPrimaryDrag({ wasDrag, wasHold }) {
+    dragging = false;
+    root.classList.remove("is-dragging");
+    releasePointerCaptureSafe(dragPointerId);
+    dragPointerId = null;
+    primaryId = null;
+    clearHoldTimer();
+    if (wasHold) endHold();
+
+    if (wasDrag) {
+      const sampled = velocityFromSamples();
+      // Prefer the stronger of sample-window velocity and live drag velocity.
+      let vx = sampled.vx;
+      let vy = sampled.vy;
+      if (Math.hypot(velX, velY) > Math.hypot(vx, vy)) {
+        vx = velX;
+        vy = velY;
+      }
+      dragSamples = [];
+      if (shouldStartCoast(vx, vy, { reducedMotion: reducedMq.matches })) {
+        startCoast(vx, vy);
+      } else {
+        velX = 0;
+        velY = 0;
+        applySeat(seatX, seatY, { save: true });
+        hopUntil = performance.now() + 280;
+        setExpression("surprised", { force: true });
+        if (awake) sayLine(pick(["Parked.", "New spot!", "I like it here.", "Jelly settled."]), { hold: 1800 });
+      }
+      return;
+    }
+
+    dragSamples = [];
+    if (!wasHold) registerTap();
+  }
+
+  dragSurface.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button != null && event.button !== 0) return;
+    pointers.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+      sx: event.clientX,
+      sy: event.clientY,
+      t: performance.now()
+    });
+
+    if (pointers.size === 1) {
+      beginPrimaryDrag(event);
+    } else if (pointers.size === 2) {
+      // Multi-touch: cancel hold/drag, enter pinch (no fight with flick path).
+      clearHoldTimer();
+      if (holding) endHold();
+      dragging = false;
+      didDrag = false;
+      root.classList.remove("is-dragging");
+      releasePointerCaptureSafe(dragPointerId);
+      dragPointerId = null;
+      primaryId = null;
+      dragSamples = [];
+      velX = 0;
+      velY = 0;
+      pinching = true;
+      root.classList.add("is-pinching");
+      pinchStartDist = pointerPairDist();
+      pinchLiveScale = 1;
+      stopCoast({ save: false });
+    }
     event.preventDefault();
   });
 
   dragSurface.addEventListener("pointermove", (event) => {
+    const tracked = pointers.get(event.pointerId);
+    if (!tracked) return;
+    tracked.x = event.clientX;
+    tracked.y = event.clientY;
+
+    if (pinching && pointers.size >= 2) {
+      pinchLiveScale = clamp(pointerPairDist() / pinchStartDist, 0.55, 1.6, 1);
+      samplePointer(event.clientX, event.clientY);
+      return;
+    }
+
     if (!dragging || event.pointerId !== dragPointerId) return;
     const dx = event.clientX - dragStartX;
     const dy = event.clientY - dragStartY;
-    if (!didDrag && Math.hypot(dx, dy) >= DRAG_THRESHOLD) didDrag = true;
+    if (!didDrag && Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+      didDrag = true;
+      clearHoldTimer();
+      if (holding) endHold();
+      root.classList.add("is-dragging");
+      // Moving cancels multi-tap streak.
+      tapCount = 0;
+      window.clearTimeout(tapTimer);
+      tapTimer = 0;
+    }
     if (!didDrag) return;
+
+    const prevX = seatX;
+    const prevY = seatY;
     applySeat(event.clientX - dragOffsetX, event.clientY - dragOffsetY);
+    const now = performance.now();
+    pushDragSample(event.clientX, event.clientY, now);
+    if (dragSamples.length >= 2) {
+      const { vx, vy } = velocityFromSamples();
+      velX = vx;
+      velY = vy;
+    } else {
+      velX = (seatX - prevX) / Math.max(0.016, (now - lastTs) / 1000);
+      velY = (seatY - prevY) / Math.max(0.016, (now - lastTs) / 1000);
+    }
     samplePointer(event.clientX, event.clientY);
   });
 
-  function endDrag(event) {
-    if (!dragging) return;
-    if (event && dragPointerId != null && event.pointerId !== dragPointerId) return;
-    const wasDrag = didDrag;
-    dragging = false;
-    root.classList.remove("is-dragging");
-    if (dragPointerId != null) {
-      try {
-        if (dragSurface.hasPointerCapture?.(dragPointerId)) {
-          dragSurface.releasePointerCapture(dragPointerId);
-        }
-      } catch {
-        /* ignore */
+  function onPointerEnd(event) {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.delete(event.pointerId);
+
+    if (pinching) {
+      if (pointers.size < 2) {
+        finishPinch();
+        // Drop any leftover single finger without treating it as a tap/drag.
+        pointers.clear();
+        dragging = false;
+        didDrag = false;
+        root.classList.remove("is-dragging");
+        releasePointerCaptureSafe(dragPointerId);
+        dragPointerId = null;
+        primaryId = null;
+        dragSamples = [];
       }
+      return;
     }
-    dragPointerId = null;
-    if (wasDrag) {
-      applySeat(seatX, seatY, { save: true });
-      hopUntil = performance.now() + 280;
-      setExpression("surprised", { force: true });
-      if (awake) sayLine(pick(["Parked.", "New spot!", "I like it here."]), { hold: 1800 });
+
+    if (event.pointerId === dragPointerId || event.pointerId === primaryId) {
+      const wasDrag = didDrag;
+      const wasHold = holding;
+      endPrimaryDrag({ wasDrag, wasHold });
     }
   }
 
-  dragSurface.addEventListener("pointerup", endDrag);
-  dragSurface.addEventListener("pointercancel", endDrag);
+  dragSurface.addEventListener("pointerup", onPointerEnd);
+  dragSurface.addEventListener("pointercancel", onPointerEnd);
 
+  // Clicks are resolved via tap timing on pointerup (supports multi-tap).
   buddy?.addEventListener("click", (event) => {
-    if (didDrag) {
-      event.preventDefault();
-      event.stopPropagation();
-      didDrag = false;
-      return;
-    }
-    poke();
+    event.preventDefault();
+    event.stopPropagation();
   });
 
   const reader = document.querySelector("#story-reader");
@@ -751,19 +1112,46 @@ export function setupSynCompanion(options = {}) {
 
   const api = {
     say: sayLine,
+    flick(vx = 600, vy = -200) {
+      startCoast(vx, vy);
+    },
+    stop() {
+      stopCoast({ save: true });
+    },
     setMood,
     setExpression,
     poke,
+    doubleTap,
+    tripleTap,
     hop() {
       hopUntil = performance.now() + 400;
     },
     moveTo(x, y) {
       applySeat(x, y, { save: true });
+    },
+    debug() {
+      return {
+        seat: { x: seatX, y: seatY },
+        vel: { x: velX, y: velY },
+        coasting,
+        dragging,
+        didDrag,
+        holding,
+        pinching,
+        pointers: pointers.size,
+        tapCount,
+        samples: dragSamples.length,
+        reduced: reducedMq.matches,
+        gesture: root.dataset.gesture || null,
+        cls: root.className
+      };
     }
   };
   globalThis.SynCompanion = api;
+  try { window.SynCompanion = api; } catch { /* ignore */ }
   root.dataset.companion = "syn";
   root.dataset.face = "moodie-bloub";
   root.dataset.pet = "1";
+  root.dataset.gestures = "hold,tap,pinch,flick";
   return api;
 }

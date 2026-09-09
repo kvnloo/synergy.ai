@@ -1,0 +1,236 @@
+# Synergy traceability matrix
+# ethos → feature → spec → ui → backend → tests
+# Machine-checked by: node scripts/check-trace.mjs
+# Human-read: QUALITY.md § Traceability
+
+schema_version: 1
+product: synergy.ai
+updated: 2026-09-09
+
+# ── Product ethos ──────────────────────────────────────────────
+# E0–E3 = published editorial code (#principles).
+# E4–E9 = product/security ethos from README + design intent.
+ethos:
+  E0:
+    title: Earn the reader's trust
+    source: index.html#principles-title
+    statement: Trust is the product. Every surface either earns it or spends it.
+  E1:
+    title: Use the closest source
+    source: index.html#principles article 01
+    statement: Link agencies, local orgs, datasets, original docs. Commentary second.
+  E2:
+    title: Label what we know
+    source: index.html#principles article 02
+    statement: Reported fact, interpretation, and hypothesis stay distinct on the page.
+  E3:
+    title: Measure the work
+    source: index.html#principles article 03
+    statement: Named user + observable result. Code shipped ≠ problem solved.
+  E4:
+    title: Protect people before data
+    source: index.html#principles article 04
+    statement: No sensitive collection because it might be useful later. Safety bounds data.
+  E5:
+    title: Evidence over confidence theater
+    source: README.md § Evidence model
+    statement: No universal confidence score. Citations show work; they do not prove truth.
+  E6:
+    title: Brief first, sources one level deeper
+    source: README.md § Harness handoff
+    statement: First click teaches the issue; primary sources wait in the drawer.
+  E7:
+    title: Credentials stay local
+    source: README.md § Optional AI access
+    statement: Pairing codes and keys never leave device trust boundary; no hosted proxy of secrets.
+  E8:
+    title: Bounded action, not doomscroll
+    source: index.html#done-today, recall-due, verify-today
+    statement: One brief can be enough; recall and verify are short loops that stick.
+  E9:
+    title: Companion is the product's pet
+    source: companion-bot.js #syn-companion
+    statement: Syn lives inside the reader as presence/gesture — not a separate Grok-Bot product.
+
+# ── Features ───────────────────────────────────────────────────
+# Each feature MUST list: ethos, acceptance (spec), ui, backend, tests.
+features:
+  F-catalog:
+    name: Issue brief catalog
+    ethos: [E0, E1, E2, E5, E6]
+    acceptance: >
+      Every article has stable id, title, visual, ISO reviewed date, exactly 5 slides;
+      each slide has title, kind, sources[]; flagships multi-source; source URLs http(s).
+    ui:
+      - index.html#lead-title
+      - index.html a.article-link[data-article]
+      - app.js openReader / render path
+    backend:
+      - content.js#articles
+      - scripts/export-briefs.mjs → data/briefs.json
+    tests:
+      - test/unit/content.test.js
+      - smoke:boot
+
+  F-reader:
+    name: Mobile evidence reader
+    ethos: [E0, E6, E8]
+    acceptance: >
+      Opening a brief uses a full-viewport stage; .reader-card is the sole vertical scrollport;
+      theme-color darkens while open and restores paper on close; body scroll locked.
+    ui:
+      - index.html#story-reader
+      - styles.css .reader-stage / .reader-card
+      - app.js setReaderThemeColor
+    backend:
+      - content.js (slide body)
+      - sw.js SHELL (offline shell)
+    tests:
+      - smoke:reader-scroll
+      - smoke:theme-open-close
+
+  F-seminar:
+    name: Multi-source seminar
+    ethos: [E0, E1, E2, E5]
+    acceptance: >
+      Multi-source slides render lens chips, crosscut (agree/tension/open), escaped quotes,
+      and voice cards; single-source slides are labeled thin, not papered over.
+    ui:
+      - index.html .reader-disclosure
+      - styles.css .seminar-* / .voice-card
+      - app.js seminar inject path
+    backend:
+      - perspectives.js
+      - content.js slide.sources / crosscut
+    tests:
+      - test/unit/perspectives.test.js
+
+  F-verify:
+    name: Micro-verification + correction
+    ethos: [E0, E1, E2, E3, E5]
+    acceptance: >
+      Daily claim rotates deterministically; correction URL targets synergy-tasks verify-evidence
+      template with brief, insights, and length guard <6000; comment shape is stable.
+    ui:
+      - index.html#verify-today
+      - app.js verify-today wiring
+      - evidence-verify buttons in seminar
+    backend:
+      - trust.js
+      - board.js / data/board.json (open verify tasks)
+    tests:
+      - test/unit/trust.test.js
+      - smoke:boot
+
+  F-recall:
+    name: Spaced recall loop
+    ethos: [E3, E8]
+    acceptance: >
+      Six prompts per brief; grade forgot→1d, hard→×1.3, got→×2.5 (first 3d);
+      due cards ordered by due date; home due strip for short return visits.
+    ui:
+      - index.html#recall-due
+      - reader end recall UI (app.js renderRecall)
+    backend:
+      - recall.js
+      - localStorage synergy.recall.v1
+    tests:
+      - test/unit/recall.test.js
+      - test/property/recall.prop.test.js
+
+  F-companion-pet:
+    name: Syn companion presence + gestures
+    ethos: [E8, E9]
+    acceptance: >
+      Pet supports drag, flick coast with wall bounce, hold, multi-tap, pinch expand/shrink;
+      reduced-motion disables coast; seat stays in bounds; jelly stretch is velocity-linked.
+    ui:
+      - styles.css #syn-companion / data-gesture
+      - companion-bot.js setupSynCompanion / window.SynCompanion
+    backend:
+      - companion-physics.js
+      - sw.js caches companion-physics.js
+    tests:
+      - test/unit/physics.test.js
+      - test/property/physics.prop.test.js
+      - smoke:api-flick
+      - smoke:hold
+      - smoke:pointer-flick
+      - smoke:triple
+      - smoke:double
+      - smoke:pinch
+      - smoke:reduced-motion
+
+  F-companion-local:
+    name: Local companion trust boundary
+    ethos: [E4, E7]
+    acceptance: >
+      Loopback-only server; pairing code on privileged routes; vault AES-GCM;
+      listing never returns secrets; /app serves site including companion-physics.js.
+    ui:
+      - index.html companion project card / open local reader
+      - app.js companion pair flow
+    backend:
+      - companion/synergy_companion/server.py
+      - companion/synergy_companion/vault.py
+      - companion/synergy_companion/loop.py
+    tests:
+      - companion/tests/test_server.py
+      - companion/tests/test_vault.py
+      - companion/tests/test_loop.py
+      - companion/tests/test_adapters.py
+
+  F-board:
+    name: Live task board surface
+    ethos: [E3]
+    acceptance: >
+      data/board.json built from public queue; site renders claimable work without secrets.
+    ui:
+      - index.html board region / app.js board render
+    backend:
+      - board.js
+      - scripts/build_board.py
+      - data/board.json
+    tests:
+      - smoke:boot
+
+  F-offline-shell:
+    name: Service worker offline shell
+    ethos: [E8]
+    acceptance: >
+      SHELL lists all critical modules including companion-physics.js; VERSION bumps on ship.
+    ui: []
+    backend:
+      - sw.js
+    tests:
+      - scripts/check-trace.mjs#sw-shell
+
+  F-quality-gate:
+    name: Layered quality orchestration
+    ethos: [E3]
+    acceptance: >
+      npm run gate runs check-trace + unit + property + companion + smoke;
+      mutation thresholds enforced on pure modules; CI quality.yml on main/dev/PR.
+    ui: []
+    backend:
+      - package.json
+      - stryker.config.json
+      - .github/workflows/quality.yml
+      - QUALITY.md
+      - TRACEABILITY.yaml
+    tests:
+      - scripts/check-trace.mjs
+      - scripts/smoke-ui.mjs
+
+# ── Smoke assert IDs (must match scripts/smoke-ui.mjs ok() labels) ──
+smoke_asserts:
+  boot: F-catalog
+  reader-scroll: F-reader
+  theme-open-close: F-reader
+  api-flick: F-companion-pet
+  hold: F-companion-pet
+  pointer-flick: F-companion-pet
+  triple: F-companion-pet
+  double: F-companion-pet
+  pinch: F-companion-pet
+  reduced-motion: F-companion-pet

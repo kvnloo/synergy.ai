@@ -158,7 +158,10 @@ export function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-export function renderSeminarMarkup(slide, article, { startIndex = 0 } = {}) {
+// Stryker disable all: non-pure / DOM-adjacent surface
+export function renderSeminarMarkup(slide, article, { startIndex = 0 }
+// Stryker restore all
+ = {}) {
   const summary = perspectivesSummary(slide, article);
   const { crosscut, groups, questions, thin, count, quoted } = summary;
   const lensChips = groups

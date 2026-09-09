@@ -41,6 +41,7 @@ export function primingText(article) {
   return `Read to answer: ${article.slides.map((slide) => slide.kind).join(" · ")}. Six recall prompts wait at the end.`;
 }
 
+// Stryker disable all: non-pure / DOM-adjacent surface
 export function loadState() {
   try {
     const raw = localStorage.getItem(RECALL_KEY);
@@ -54,7 +55,10 @@ export function loadState() {
     return { version: 1, cards: {} };
   }
 }
+// Stryker restore all
 
+
+// Stryker disable all: non-pure / DOM-adjacent surface
 export function saveState(state) {
   try {
     localStorage.setItem(RECALL_KEY, JSON.stringify(state));
@@ -62,6 +66,8 @@ export function saveState(state) {
     /* private mode */
   }
 }
+// Stryker restore all
+
 
 export function grade(state, id, result, today = new Date()) {
   const prev = state.cards[id]?.interval;
@@ -103,7 +109,10 @@ export function dueCards(articles, state, today = new Date()) {
   return due;
 }
 
-export function renderRecall(container, prompts, { state, onGrade }) {
+// Stryker disable all: non-pure / DOM-adjacent surface
+export function renderRecall(container, prompts, { state, onGrade }
+// Stryker restore all
+) {
   container.replaceChildren();
   for (const prompt of prompts) {
     const card = state.cards[prompt.id];

@@ -1,0 +1,26 @@
+{
+  "name": "synergy.ai",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check app.js board.js companion-bot.js companion-physics.js content.js perspectives.js recall.js trust.js sw.js && node scripts/export-briefs.mjs",
+    "test:unit": "node --test test/unit/*.test.js",
+    "test:prop": "node --test test/property/*.test.js",
+    "test": "npm run check:trace && npm run check && npm run test:unit && npm run test:prop",
+    "test:companion": "cd companion && if [ -x .venv/bin/python ]; then .venv/bin/python -m unittest discover -s tests -q; else python3 -m unittest discover -s tests -q; fi",
+    "test:smoke": "node scripts/smoke-ui.mjs",
+    "test:mutation": "stryker run",
+    "gate": "npm test && npm run test:companion && npm run test:smoke",
+    "gate:full": "npm run gate && npm run test:mutation",
+    "check:trace": "node scripts/check-trace.mjs"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.1.1",
+    "@stryker-mutator/tap-runner": "^9.1.1",
+    "fast-check": "^4.3.0",
+    "puppeteer-core": "^24.22.0"
+  }
+}
