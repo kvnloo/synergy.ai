@@ -8,6 +8,7 @@ export const articles = [
     summary: "News tells us that aid is blocked. The harder question is how: which roads close, who controls access, and what local responders need to keep moving.",
     visual: "conflict",
     visualWord: "ACCESS / POWER",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -70,6 +71,7 @@ export const articles = [
     summary: "Start with exposure, housing, power, and access to care. The temperature alone does not describe who is at risk.",
     visual: "climate",
     visualWord: "HEAT / CARE",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -117,6 +119,7 @@ export const articles = [
     summary: "Automate retrieval and comparison, then keep a person responsible for every published claim.",
     visual: "technology",
     visualWord: "HUMAN / REVIEW",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -167,6 +170,7 @@ export const articles = [
     summary: "Definitions, reporting windows, and missing registrations matter. Read the number with the method that produced it.",
     visual: "displacement",
     visualWord: "COUNT / PEOPLE",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -214,6 +218,7 @@ export const articles = [
     summary: "Staff, fuel, clean water, medicine, referrals, and safe access determine whether care continues during conflict.",
     visual: "health",
     visualWord: "SYSTEM / DOWN",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -261,6 +266,7 @@ export const articles = [
     summary: "Distinction, proportionality, and precautions shape what parties may do and what monitors document.",
     visual: "conflict",
     visualWord: "RULES / APPLY",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",
@@ -308,6 +314,7 @@ export const articles = [
     summary: "GLP-1 and multi-agonist drugs quiet appetite and improve metabolic markers. The harder societal question is how conscious control, attention, and access get designed when food, feeds, and algorithms all compete for the same scarce self.",
     visual: "health",
     visualWord: "CONTROL / CRAVING",
+    reviewed: "2026-09-03",
     slides: [
       {
         kind: "The brief",

@@ -2,6 +2,12 @@ import { articles } from "./content.js";
 import { setupSynCompanion } from "./companion-bot.js";
 import { setupBoard } from "./board.js";
 import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall } from "./recall.js";
+import {
+  findVerifyTask,
+  buildVerificationComment,
+  buildCorrectionUrl,
+  pickDailyClaim
+} from "./trust.js";
 
 const NON_FILTER_TOPICS = new Set(["projects", "contribute"]);
 const TASK_QUEUE_NEW = "https://github.com/kvnloo/synergy-tasks/issues/new";
@@ -57,6 +63,18 @@ const causalChain = document.querySelector("#causal-chain");
 const evidenceList = document.querySelector("#evidence-list");
 const evidenceCount = document.querySelector("#evidence-count");
 const evidenceDrawer = document.querySelector("#evidence-drawer");
+const evidenceReview = document.querySelector("#evidence-review");
+const verifyForm = document.querySelector("#verify-form");
+const verifyClaim = document.querySelector("#verify-claim");
+const verifyPassage = document.querySelector("#verify-passage");
+const verifySubmit = document.querySelector("#verify-submit");
+const verifyStatus = document.querySelector("#verify-status");
+const verifyToday = document.querySelector("#verify-today");
+const verifyTodayTitle = document.querySelector("#verify-today-title");
+const verifyTodayMeta = document.querySelector("#verify-today-meta");
+const verifyTodayOpen = document.querySelector("#verify-today-open");
+let verifySourceIndex = 0;
+let boardApi = { getBoard: () => null };
 const recallDrawer = document.querySelector("#recall-drawer");
 const recallList = document.querySelector("#recall-list");
 const recallCount = document.querySelector("#recall-count");
@@ -387,17 +405,38 @@ function setTopic(topic, selectedLink) {
   applyFilters();
 }
 
-function evidenceMarkup(source) {
+function evidenceMarkup(source, index) {
   return `
     <article class="evidence-item">
       <div class="evidence-relation">${source.relation}</div>
       <div>
         <a href="${source.url}" target="_blank" rel="noreferrer">${source.title} ↗</a>
         <p>${source.note}</p>
+        <button class="evidence-verify" type="button" data-source="${index}">Verify</button>
       </div>
     </article>
   `;
 }
+
+function openVerifyForm(index) {
+  if (!currentArticle) return;
+  const slide = currentArticle.slides[currentSlideIndex];
+  const item = evidenceList.querySelectorAll(".evidence-item")[index];
+  if (!item || !slide?.sources[index]) return;
+  verifySourceIndex = index;
+  verifyForm.hidden = false;
+  item.insertAdjacentElement("afterend", verifyForm);
+  verifyClaim.textContent = `Does this source support: “${slide.title}”?`;
+  verifyPassage.value = "";
+  verifyStatus.textContent = "";
+  verifyForm.querySelectorAll('input[name="finding"]').forEach((input) => {
+    input.checked = false;
+  });
+  const task = findVerifyTask(boardApi.getBoard(), currentArticle.id);
+  verifySubmit.textContent = task ? `Send to task #${task.number}` : "Open a correction";
+  evidenceDrawer.open = true;
+}
+
 
 function updateReaderProgress() {
   const progress = Math.min(readerProgressElapsed / READER_PROGRESS_DURATION, 1);
@@ -884,10 +923,15 @@ function renderReaderSlide() {
   causalChain.innerHTML = slide.chain.map((step, index) => `
     <li><span>${String(index + 1).padStart(2, "0")}</span><p>${step}</p></li>
   `).join("");
-  evidenceList.innerHTML = slide.sources.map(evidenceMarkup).join("");
+  evidenceList.innerHTML = slide.sources.map((source, index) => evidenceMarkup(source, index)).join("");
+  if (verifyForm && !verifyForm.hidden) {
+    verifyForm.hidden = true;
+    evidenceDrawer.append(verifyForm);
+  }
   readerCard.scrollTop = 0;
   evidenceCount.textContent = `${slide.sources.length} source${slide.sources.length === 1 ? "" : "s"}`;
   evidenceDrawer.open = false;
+  evidenceReview.innerHTML = `Reviewed ${currentArticle.reviewed} · <button type="button" id="flag-problem">Flag a problem</button>`;
   readerPrime.hidden = currentSlideIndex !== 0;
   readerPrime.textContent = primingText(currentArticle);
   recallDrawer.classList.toggle("is-ready", currentSlideIndex === currentArticle.slides.length - 1);
@@ -1573,20 +1617,26 @@ ${buildArticleContext(currentArticle)}
 }
 
 async function copyText(text) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.append(field);
+    field.select();
+    document.execCommand("copy");
+    field.remove();
+    return true;
+  } catch {
+    return false;
   }
-  const field = document.createElement("textarea");
-  field.value = text;
-  field.setAttribute("readonly", "");
-  field.style.position = "fixed";
-  field.style.opacity = "0";
-  document.body.append(field);
-  field.select();
-  document.execCommand("copy");
-  field.remove();
 }
+
 
 async function copyPrototypeBundle() {
   if (!currentPrototypeBundle) return;
@@ -1936,7 +1986,7 @@ document.querySelector("#current-date").textContent = new Intl.DateTimeFormat("e
 document.querySelector("#current-year").textContent = today.getFullYear();
 completeOpenRouterConnection();
 setupSynCompanion({ motion: SynergyMotion });
-setupBoard({
+boardApi = setupBoard({
   articles,
   companion: {
     request: companionRequest,
@@ -1945,7 +1995,7 @@ setupBoard({
     pollJob: pollCompanionJob
   },
   buildTaskMarkdown
-});
+}) || { getBoard: () => null };
 
 configureCompanionTransport();
 renderDispatches();
@@ -1954,3 +2004,84 @@ renderStories();
 applyFilters();
 setupSectionReveals();
 setupWhiteboard();
+
+evidenceList.addEventListener("click", (event) => {
+  const button = event.target.closest(".evidence-verify");
+  if (!button) return;
+  openVerifyForm(Number(button.dataset.source));
+});
+
+evidenceReview.addEventListener("click", (event) => {
+  if (event.target.id !== "flag-problem") return;
+  openVerifyForm(0);
+  const first = verifyForm.querySelector('input[name="finding"]');
+  first?.focus();
+});
+
+verifyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentArticle) return;
+  const finding = verifyForm.querySelector('input[name="finding"]:checked')?.value;
+  if (!finding) {
+    verifyStatus.textContent = "Pick supports, contradicts, or could not find it.";
+    return;
+  }
+  const slide = currentArticle.slides[currentSlideIndex];
+  const source = slide.sources[verifySourceIndex];
+  const passage = verifyPassage.value.trim();
+  const date = new Date().toISOString().slice(0, 10);
+  const comment = buildVerificationComment({
+    article: currentArticle,
+    slideIndex: currentSlideIndex,
+    source,
+    finding,
+    passage,
+    date
+  });
+  const task = findVerifyTask(boardApi.getBoard(), currentArticle.id);
+  if (task) {
+    const copied = await copyText(comment);
+    if (copied) {
+      verifyStatus.textContent = `Copied. Paste it as a comment on task #${task.number}; it opens now.`;
+    } else {
+      let pre = verifyForm.querySelector("pre.verify-fallback");
+      if (!pre) {
+        pre = document.createElement("pre");
+        pre.className = "verify-fallback";
+        verifyForm.append(pre);
+      }
+      pre.textContent = comment;
+      verifyStatus.textContent = `Copy this and paste it on task #${task.number}.`;
+    }
+    window.open(`${task.url}#new_comment_field`, "_blank", "noopener");
+    return;
+  }
+  window.open(
+    buildCorrectionUrl({
+      article: currentArticle,
+      slideIndex: currentSlideIndex,
+      source,
+      finding,
+      passage
+    }),
+    "_blank",
+    "noopener"
+  );
+  verifyStatus.textContent = "Opened a prefilled correction task. Submit it on GitHub.";
+});
+
+{
+  const daily = pickDailyClaim(articles);
+  if (daily && verifyTodayTitle) {
+    verifyTodayTitle.textContent = daily.slide.title;
+    verifyTodayMeta.textContent = `${daily.article.label} · source: ${daily.source.title}`;
+    verifyTodayOpen.addEventListener("click", () => {
+      openArticle(daily.article.id);
+      setSlide(daily.slideIndex);
+      evidenceDrawer.open = true;
+      openVerifyForm(daily.sourceIndex);
+    });
+  } else if (verifyToday) {
+    verifyToday.hidden = true;
+  }
+}

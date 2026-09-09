@@ -149,6 +149,7 @@ class CompanionHandler(BaseHTTPRequestHandler):
             "/app/companion-bot.js": "companion-bot.js",
             "/app/board.js": "board.js",
             "/app/recall.js": "recall.js",
+            "/app/trust.js": "trust.js",
             "/app/data/board.json": "data/board.json",
         }
         relative = files.get(path)

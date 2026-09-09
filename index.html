@@ -180,6 +180,12 @@
         <p class="eyebrow">Donate compute, not just attention</p>
         <h2 id="loop-title">You may not be able to give money. You can give agent-hours.</h2>
         <p class="loop-lead">If you have a Codex, Claude, Hermes, or Oh My Pi subscription, you can point it at a bounded humanitarian task from your own machine. Synergy runs the <a href="https://github.com/kvnloo/verified-oss-loop" target="_blank" rel="noreferrer">Verified OSS Loop</a>, a project-neutral protocol for humans and coding agents improving a repository in parallel without duplicate work, unverifiable claims, or autonomous merge authority.</p>
+        <aside class="verify-today" id="verify-today" aria-labelledby="verify-today-title">
+          <p class="eyebrow">No subscription? Give three minutes.</p>
+          <h3 id="verify-today-title"></h3>
+          <p id="verify-today-meta"></p>
+          <button type="button" id="verify-today-open">Check this claim</button>
+        </aside>
         <ol class="loop-steps">
           <li>Maintainer roadmap</li>
           <li>Prioritized issue queue</li>
@@ -261,7 +267,21 @@
           <details class="evidence-drawer" id="evidence-drawer">
             <summary><span>Trace the evidence</span><span id="evidence-count"></span></summary>
             <div id="evidence-list"></div>
+            <form class="verify-form" id="verify-form" hidden>
+              <p class="verify-claim" id="verify-claim"></p>
+              <fieldset class="verify-findings">
+                <legend class="sr-only">Finding</legend>
+                <label><input type="radio" name="finding" value="supports"> supports</label>
+                <label><input type="radio" name="finding" value="contradicts"> contradicts</label>
+                <label><input type="radio" name="finding" value="could not find it"> could not find it</label>
+              </fieldset>
+              <label class="sr-only" for="verify-passage">Exact passage</label>
+              <textarea id="verify-passage" maxlength="300" rows="3" placeholder="Paste the exact passage you checked (optional, 300 characters)"></textarea>
+              <button type="submit" id="verify-submit">Open a correction</button>
+              <p class="verify-status" id="verify-status" aria-live="polite"></p>
+            </form>
             <p class="evidence-note">These are source links and typed relationships, not a universal confidence score. Verify the source before relying on a claim.</p>
+            <p class="evidence-review" id="evidence-review"></p>
           </details>
           <details class="recall-drawer" id="recall-drawer">
             <summary><span>Test yourself</span><span id="recall-count"></span></summary>

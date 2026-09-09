@@ -40,7 +40,7 @@ export function setupBoard({ articles, companion, buildTaskMarkdown }) {
   const pairButton = document.querySelector("#pair-worker");
   const workerStatus = document.querySelector("#worker-status");
   const identityLine = document.querySelector("#worker-identity");
-  if (!stats || !grid) return;
+  if (!stats || !grid) return { getBoard: () => null, refresh: async () => {} };
 
   let board = null;
   let identity = null;
@@ -267,4 +267,5 @@ export function setupBoard({ articles, companion, buildTaskMarkdown }) {
   loadIdentity().then(loadBoard);
   refreshTimer = window.setInterval(loadBoard, 60000);
   window.addEventListener("pagehide", () => window.clearInterval(refreshTimer), { once: true });
+  return { getBoard: () => board, refresh: loadBoard };
 }
