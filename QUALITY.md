@@ -73,6 +73,7 @@ Only **pure, high-leverage modules** with strong unit/property oracles are mutat
 - `companion-physics.js` — flick, bounce, jelly math
 - `recall.js` — spaced repetition (DOM `renderRecall` excluded via Stryker disable)
 - `trust.js` — verification URLs/comments (`copyText` excluded)
+- `voice-commands.js` — closed-vocabulary speech intent parsing
 
 `perspectives.js` stays on **unit tests + smoke** until seminar pure helpers justify mutation cost (string-template mutants drown signal). DOM shells (`app.js`, `companion-bot.js`) are smoke-gated, not mutated.
 
