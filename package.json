@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check app.js board.js companion-bot.js companion-physics.js content.js perspectives.js recall.js trust.js sw.js && node scripts/export-briefs.mjs",
+    "check": "node --check app.js board.js companion-bot.js companion-physics.js content.js perspectives.js recall.js trust.js voice-commands.js sw.js && node scripts/export-briefs.mjs",
     "test:unit": "node --test test/unit/*.test.js",
     "test:prop": "node --test test/property/*.test.js",
     "test": "npm run check:trace && npm run check && npm run test:unit && npm run test:prop",
