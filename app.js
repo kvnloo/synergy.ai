@@ -3,6 +3,7 @@ import { setupSynCompanion } from "./companion-bot.js";
 import { setupBoard } from "./board.js";
 import { buildPrompts, primingText, loadState, saveState, grade, dueCards, renderRecall, scoreExplanation, shuffleSteps } from "./recall.js";
 import { diversityStats, renderSeminarMarkup, escapeHtml } from "./perspectives.js";
+import { parseVoiceCommand } from "./voice-commands.js";
 import {
   findVerifyTask,
   buildVerificationComment,
@@ -1917,6 +1918,63 @@ function appendVoiceTranscript(target, transcript) {
   target.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function runVoiceCommand(command) {
+  if (!command?.matched) return null;
+  if (!command.action) {
+    const phrase = command.phrase ? `“${command.phrase}”` : "that";
+    return `I heard ${phrase} as a voice command, but I do not have a safe local action for it.`;
+  }
+
+  if (command.action === "stop_listening") {
+    stopVoiceDictation("Voice control stopped.");
+    return "Voice control stopped.";
+  }
+
+  if (!reader.open) {
+    return "Open a briefing before using reader voice commands.";
+  }
+
+  if (command.action === "next") {
+    if (currentSlideIndex >= currentArticle.slides.length - 1) return "Already at the last snippet.";
+    nextSlide();
+    return "Next snippet.";
+  }
+
+  if (command.action === "previous") {
+    if (currentSlideIndex <= 0) return "Already at the first snippet.";
+    previousSlide();
+    return "Previous snippet.";
+  }
+
+  if (command.action === "open_sources") {
+    evidenceDrawer.open = true;
+    return "Sources opened.";
+  }
+
+  if (command.action === "close_sources") {
+    evidenceDrawer.open = false;
+    return "Sources closed.";
+  }
+
+  if (command.action === "read_aloud") {
+    if (!("speechSynthesis" in window)) return "Read aloud is not available in this browser.";
+    startReadAloud();
+    return "Reading this snippet aloud.";
+  }
+
+  if (command.action === "stop_reading") {
+    stopReadAloud();
+    return "Read aloud stopped.";
+  }
+
+  if (command.action === "close_reader") {
+    closeReader();
+    return "Reader closed.";
+  }
+
+  return "Voice command unavailable.";
+}
+
 function stopVoiceDictation(message = "Microphone stopped.") {
   if (voiceRecognition) {
     voiceRecognition.stop();
@@ -1932,7 +1990,10 @@ function startVoiceDictation() {
     return;
   }
 
-  voiceTarget = getVoiceDestination();
+  // Do not open a text surface just because the microphone started.
+  // Resolve the destination lazily only after a final utterance is known
+  // not to be a local voice command.
+  voiceTarget = null;
   const recognition = new SpeechRecognitionApi();
   voiceRecognition = recognition;
   recognition.lang = navigator.language || "en-US";
@@ -1945,10 +2006,24 @@ function startVoiceDictation() {
   });
   recognition.addEventListener("result", (event) => {
     let interim = "";
+    let commandStatus = "";
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
-      if (result.isFinal) appendVoiceTranscript(voiceTarget, result[0].transcript);
-      else interim += result[0].transcript;
+      if (!result.isFinal) {
+        interim += result[0].transcript;
+        continue;
+      }
+
+      const transcript = result[0].transcript;
+      const command = parseVoiceCommand(transcript);
+      if (command) {
+        commandStatus = runVoiceCommand(command) || "";
+        if (!voiceActive) return;
+        continue;
+      }
+
+      if (!voiceTarget) voiceTarget = getVoiceDestination();
+      appendVoiceTranscript(voiceTarget, transcript);
     }
     if (interim && voiceTarget === prototypeIdea) {
       const draft = getPrototypeDraft();
@@ -1961,9 +2036,9 @@ function startVoiceDictation() {
         renderWhiteboardStickies();
       }
     }
-    setVoiceStatus(interim
+    setVoiceStatus(commandStatus || (interim
       ? `Listening: ${interim}`
-      : "Listening. Press Stop when you are finished.");
+      : "Listening. Say “Synergy next” for local controls, or dictate normally."));
   });
   recognition.addEventListener("error", (event) => {
     setVoiceStatus(event.error === "not-allowed"
