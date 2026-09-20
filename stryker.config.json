@@ -3,12 +3,13 @@
   "packageManager": "npm",
   "testRunner": "command",
   "commandRunner": {
-    "command": "node --test test/unit/physics.test.js test/unit/recall.test.js test/unit/trust.test.js test/property/physics.prop.test.js test/property/recall.prop.test.js"
+    "command": "node --test test/unit/physics.test.js test/unit/recall.test.js test/unit/trust.test.js test/unit/voice-commands.test.js test/property/physics.prop.test.js test/property/recall.prop.test.js"
   },
   "mutate": [
     "companion-physics.js",
     "recall.js",
-    "trust.js"
+    "trust.js",
+    "voice-commands.js"
   ],
   "ignorePatterns": [
     "companion/**",
@@ -27,7 +28,12 @@
   "coverageAnalysis": "off",
   "timeoutMS": 15000,
   "concurrency": 2,
-  "reporters": ["clear-text", "progress", "html", "json"],
+  "reporters": [
+    "clear-text",
+    "progress",
+    "html",
+    "json"
+  ],
   "htmlReporter": {
     "fileName": "reports/mutation/index.html"
   },
