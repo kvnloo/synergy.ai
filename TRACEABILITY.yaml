@@ -5,7 +5,7 @@
 
 schema_version: 1
 product: synergy.ai
-updated: 2026-09-09
+updated: 2026-09-20
 
 # ── Product ethos ──────────────────────────────────────────────
 # E0–E3 = published editorial code (#principles).
@@ -137,6 +137,23 @@ features:
     tests:
       - test/unit/recall.test.js
       - test/property/recall.prop.test.js
+
+
+  F-voice-control:
+    name: Local voice reader controls
+    ethos: [E0, E4, E8]
+    acceptance: >
+      Known Synergy voice commands dispatch only a closed set of local reader actions;
+      ordinary speech and unknown bare product-name phrases remain dictation; explicit
+      unknown commands never guess; starting voice opens no text surface before final dictation.
+    ui:
+      - index.html voice disclosure
+      - app.js voice command dispatcher
+    backend:
+      - voice-commands.js
+      - sw.js caches voice-commands.js
+    tests:
+      - test/unit/voice-commands.test.js
 
   F-companion-pet:
     name: Syn companion presence + gestures
