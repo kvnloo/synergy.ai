@@ -1,4 +1,4 @@
-const VERSION = "2026-09-09-quality-gate";
+const VERSION = "2026-09-20-voice-controls";
 const CACHE = `synergy-${VERSION}`;
 const SHELL = [
   "./",
@@ -10,7 +10,9 @@ const SHELL = [
   "./companion-bot.js",
   "./companion-physics.js",
   "./recall.js",
-  "./trust.js", "./perspectives.js",
+  "./trust.js",
+  "./perspectives.js",
+  "./voice-commands.js",
   "./favicon.svg",
   "./manifest.webmanifest"
 ];
